@@ -250,16 +250,102 @@ algorithm_dual(void)
  *　ペナルティ計測用の関数
  *	直進して1500mm進んで止まるだけ
  */
-void
-jouga_straight(void)
-{
-  // モータの動作開始
+void jouga_straight(void) {
+  enum StraightState {
+    BlackStraight,
+    WhiteStraight,
+    ArrivedFirstCircle, 
+    ArrivedSecondCircle,
+    StateNum,
+  };
+  // 現在のロボットの状態
+  enum StraightState myState = BlackStraight;
+
+  //  完全一致の黒色白色を感知するのは難しいので許容する範囲
+  int range = 50;
+  // 左右モーターの白領域に入ってからの回転数
+  int RmotorCount = 0;
+  int LmotorCount = 0;
+  int subMotorCount = RmotorCount - LmotorCount;
+  bool isAdjusting = false;
+
+  /*---------------発進動作-----------------------*/
   motor_set_speed(Rmotor, HIGHPOWER, 1);
   motor_set_speed(Lmotor, HIGHPOWER, 1);
-  dly_tsk(4000);	// 1500mm進むまで待つ
-  // モータの停止
-  motor_set_speed(Rmotor, 0, 0);
-  motor_set_speed(Lmotor, 0, 0);
+
+  for (;;) {
+    // 光と色センサーで値取得
+    lval = get_light_sensor(Light);
+    cval = get_light_sensor(Color);
+    
+    switch (StraightState) {
+      case BlackStraight:
+        // 黒ラインアルゴリズム
+        // ライトセンサーと右モーターの関係
+        if (lval > (lhigh + llow) / 2) {		// 閾値より明るいとき
+          motor_set_speed(Rmotor, HIGHPOWER, 1);
+        } else {					// 閾値より暗いとき
+          motor_set_speed(Rmotor, LOWPOWER, 1);
+        }
+
+        // カラーセンサーと左モーターの関係
+        if (cval > (chigh + clow) / 2) {		// 閾値より明るいとき
+          motor_set_speed(Lmotor, HIGHPOWER, 1);
+        } else {					// 閾値より暗いとき
+          motor_set_speed(Lmotor, LOWPOWER, 1);
+        }
+        // 黒ラインを走行中に白を感知したらステートを白走行に変更
+        if (cval > chigh - range && lval > lhigh - range) {
+          myState = WhiteStraight;
+        }
+        break;
+    
+      case WhiteStraight:
+        // 完全に0にはならないかも(一つの指標として)
+        if (nxt_motor_get_count(Rmotor) == 0) {
+          RmotorCount++;
+        }
+        if (nxt_motor_get_count(Lmotor) == 0) {
+          LmotorCount++;
+        }
+        subMotorCount = RmotorCount - LmotorCount;
+
+        // 回転角度によって速度修正
+        if (!isAdjusting) {
+          // Rmotorの回転数の方が多いとき
+          if (subMotorCount >= 1) {
+            motor_set_speed(Rmotor, 0, 1);
+            motor_set_speed(Lmotor, HIGHPOWER, 1);
+            isAdjusting = true;
+          }
+          // Lmotorの回転数の方が多いとき
+          else if (subRotation <= -1) {
+            motor_set_speed(Rmotor, HIGHPOWER, 1);
+            motor_set_speed(Lmotor, 0, 1);
+            isAdjusting = true;
+          }
+          else {
+            motor_set_speed(Rmotor, HIGHPOWER, 1);
+            motor_set_speed(Lmotor, HIGHPOWER, 1);
+            isAdjusting = false;
+          }
+        }
+
+        // 白領域を走行中に黒を感知したらステートを1つ目の円感知後に変更
+        if (cval < clow + range && lval < low + range) {
+          myState = ArrivedFirstCircle;
+          motor_set_speed(Rmotor, LOWPOWER / 3 + 10, 1);
+          motor_set_speed(Lmotor, LOWPOWER / 3 + 10, 1);
+        }
+        break;
+
+      case ArrivedFirstCircle:
+        break;
+
+      case ArrivedSecondCircle:
+        break;
+    }
+  }
 }
 
 /*
