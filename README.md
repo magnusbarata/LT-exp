@@ -1,1 +1,5 @@
 千葉大学情報画像学科 情報画像実験III-16班
+Suzumaru's Straight Branch
+
+これはペナルティ競技実装用のブランチです. 
+jouga_straight以外の関数は変更していないためアルゴリズムが完成次第masterにmergeさせます.
