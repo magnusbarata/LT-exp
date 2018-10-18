@@ -15,6 +15,7 @@
 #include "graphics.h"
 
 #define ARRAYSIZE(A)	(sizeof((A)) / sizeof((A)[0]))
+#define PI 3.14
 
 /* 型や関数の宣言 */
 typedef void (*MFunc)(void);
@@ -251,7 +252,7 @@ algorithm_dual(void)
  */
 
 // 左右のモーターの回転数を修正するための関数
-int AdjustDirect(const int subMotorCount) {
+void AdjustDirect(const int subMotorCount) {
   // 回転角度によって速度修正(修正の必要があるときだけ呼ばれる)
   // Rmotorの回転数の方が多いとき
   if (subMotorCount >= 1) {
@@ -283,6 +284,7 @@ int CalcColor(const int cval, const int lval, const int range) {
 }
 void jouga_straight(void) {
   enum StraightState {
+    None,
     BlackStraight,
     WhiteStraight,
     ArrivedFirstCircle, 
@@ -300,16 +302,16 @@ void jouga_straight(void) {
     ColorNum,
   };
 
-  enum StraightState myState = none;        // 現在のロボットの状態
-  enum CalculatedColor nextColor = none;
+  enum StraightState myState = None;        // 現在のロボットの状態
+  enum CalculatedColor nextColor = ColorNum;
   int range = 50;                          //  完全一致の黒色白色を感知するのは難しいので許容する範囲
   // 左右のモーターの回転数
   int RmotorCount = 0;
   int LmotorCount = 0;
   int subMotorCount = RmotorCount - LmotorCount;
-  bool isAdjusting = false;
+  int isAdjusting = 0;
 
-  int baseCount[6] ={};                        // 最低限満たすべきモーターの回転数(直線で進むのが最短距離なのでこれ以上短くなることはない)
+  int baseCount[6] ={0};                        // 最低限満たすべきモーターの回転数(直線で進むのが最短距離なのでこれ以上短くなることはない)
   /*---------------発進動作-----------------------*/
   motor_set_speed(Rmotor, HIGHPOWER, 1);
   motor_set_speed(Lmotor, HIGHPOWER, 1);
@@ -332,7 +334,7 @@ void jouga_straight(void) {
     /*---------------------------------------------------------*/
 
     /*-------------スタートから十字架まで------------------------*/
-    if (isAdjusting) {
+    if (isAdjusting == 1) {
       AdjustDirect(subMotorCount);
     }
     // スタート地点の十字に到達
@@ -341,7 +343,7 @@ void jouga_straight(void) {
     }
     /*---------------------------------------------------------*/
 
-    switch (StraightState) {
+    switch (myState) {
       case BlackStraight:
         /*-----------------------黒ラインアルゴリズム--------------------------*/
         // ライトセンサーと右モーターの関係
@@ -368,7 +370,7 @@ void jouga_straight(void) {
       
       // 白領域走行
       case WhiteStraight:
-        if (isAdjusting) {
+        if (isAdjusting == 1) {
           AdjustDirect(subMotorCount);
         }
         // 白領域を走行中に黒を感知したらステートを1つ目の円感知後に変更
@@ -382,7 +384,7 @@ void jouga_straight(void) {
       // ↓結構ハードコーディングだけどあまりいい案が浮かなばなかった...
       // 最初の黒円到達後
       case ArrivedFirstCircle:
-        if (isAdjusting) {
+        if (isAdjusting == 1) {
           AdjustDirect(subMotorCount);
         }
         if (nextColor == White && (RmotorCount >= baseCount[3] && LmotorCount >= baseCount[3])) {
@@ -391,7 +393,7 @@ void jouga_straight(void) {
         break;
       // 最初の白円到達後
       case ArrivedSecondCircle:
-        if (isAdjusting) {
+        if (isAdjusting == 1) {
           AdjustDirect(subMotorCount);
         }
         if (nextColor == Black && (RmotorCount >= baseCount[4] && LmotorCount >= baseCount[4])) {        
@@ -399,8 +401,8 @@ void jouga_straight(void) {
         }
         break;
       // 2個目の黒円到達後
-      case ArrivedThridCircle:
-        if (isAdjusting) {
+      case ArrivedThirdCircle:
+        if (isAdjusting == 1) {
           AdjustDirect(subMotorCount);
         }
         if (nextColor == White && (RmotorCount >= baseCount[5] && LmotorCount >= baseCount[5])) {        
@@ -409,7 +411,7 @@ void jouga_straight(void) {
         break;
       // 2個目の白円到達後
       case ArrivedFourthCircle:
-          myState = none;
+          myState = null;
           motor_set_speed(Rmotor, 0, 1);
           motor_set_speed(Lmotor, 0, 1);
         break;
@@ -420,10 +422,10 @@ void jouga_straight(void) {
 
     // スピードを元に戻してからisAdjustingをfalseにしたいので下に持ってくる
     if (subMotorCount * subMotorCount > 1) {
-      isAdjusting = true;
+      isAdjusting = 1;
     }
     else {
-      isAdjusting = false;
+      isAdjusting = 0;
     }
   }
 }
