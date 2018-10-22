@@ -532,7 +532,7 @@ DispTsk(VP_INT exinf)
   display_string("R : ");
   display_int(nxt_motor_get_count(Rmotor), 4);
   display_string("  L : ");
-  display_int(nxt_motor_get_count(Lmotor), 4);
+  display_int(nxt_motor_get_counst(Lmotor), 4);
 
   display_update();
 }
