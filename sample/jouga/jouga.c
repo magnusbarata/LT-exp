@@ -7,7 +7,7 @@
 #include "kernel_id.h"
 #include "ecrobot_interface.h"
 #include "ecrobot_base.h"
-
+#include <math.h>
 #include "jouga_cfg.h"
 #include "jouga.h"
 #include "music.h"
@@ -15,7 +15,6 @@
 #include "graphics.h"
 
 #define ARRAYSIZE(A)	(sizeof((A)) / sizeof((A)[0]))
-#define PI 3.14
 
 /* 型や関数の宣言 */
 typedef void (*MFunc)(void);
@@ -34,6 +33,12 @@ void algorithm_color(void);
 void algorithm_dual(void);
 void algorithm_straight(void);
 
+// ユーザ定義の関数
+int spd_limit(double);
+void jouga_p(void);
+void jouga_i(void);
+void jouga_d(void);
+
 /* 外部変数の定義 */
 char name[17];
 int lval, cval;
@@ -41,9 +46,26 @@ int llow = LOWVAL, lhigh = HIGHVAL;
 int clow = LOWVAL, chigh = HIGHVAL;
 void (*jouga_algorithm)(void) = algorithm_light;	// デフォルトの設定
 
+// ユーザ定義の変数
+int prev_l, prev_c; // ひとつ前の光センサ、カラーセンサの値
+int now_l, now_c;  // 現在の光センサの値
+int now_light, prev_light; // 一応残す(10/20)
+//定義した変数の変更値
+double p = 0.0;
+double i = 0.0;
+double d = 0.0;
+///* PID
+#define T_POW 70
+#define KP 2.5
+#define KI 0
+#define KD 0
+
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
   {"Calibration", calibration_func},	// センサーのキャリブレーション
+  {"p_gain", jouga_p},   //p_gainの値の変更を選択
+  {"i_gain", jouga_i},   //i_gain
+  {"d_gain", jouga_d},   //d_gain
   {"Light", jouga_light},		// ライトセンサーを選択
   {"Color", jouga_color},		// カラーセンサーを選択
   {"Dual", jouga_dual},			// 2つを使うアルゴリズムを選択
@@ -160,6 +182,7 @@ calibration_func(void)
   lhigh = lmax;
   clow = cmin;
   chigh = cmax;
+  prev_light = now_light = 0.25 * (lmax + lmin + cmax + cmin);
 }
 
 /*
@@ -167,6 +190,108 @@ calibration_func(void)
  *	ライントレースに使うアルゴリズムを選択する
  *	メニュー実現用として利用
  */
+void
+jouga_p(void)
+{
+    nxtButton btn;
+    display_clear(0);
+    
+    for(;;){
+        display_goto_xy(0,1);
+        display_string("p_gain:");
+        display_int((KP+p)*100,4);
+	display_goto_xy(0,3);
+        display_string("i_gain:");
+        display_int((KI+i)*100,4);
+	display_goto_xy(0,5);
+        display_string("d_gain:");
+        display_int((KD+d)*100,4);
+        display_update();
+        btn = get_btn();
+        switch (btn) {
+            case Cbtn: //グレーボタン == キャンセル
+                break;
+            case Rbtn: //右ボタン　＝＝　＋0.01
+                p += 0.01;
+                continue;
+            case Lbtn: //左ボタン == -0.01
+                p -= 0.01;
+                continue;
+            default:
+                continue;
+        }
+        break;
+    }
+}
+
+void
+jouga_i(void)
+{
+    nxtButton btn;
+    display_clear(0);
+    
+    for(;;){
+        display_goto_xy(0,1);
+        display_string("p_gain:");
+        display_int((KP+p)*100,4);
+	display_goto_xy(0,3);
+        display_string("i_gain:");
+        display_int((KI+i)*100,4);
+	display_goto_xy(0,5);
+        display_string("d_gain:");
+	display_int((KD+d)*100,4);
+        display_update();
+        btn = get_btn();
+        switch (btn) {
+            case Cbtn: //グレーボタン == キャンセル
+                break;
+            case Rbtn: //右ボタン　＝＝　＋0.01
+                i += 0.01;
+                continue;
+            case Lbtn: //左ボタン == -0.01
+                i -= 0.01;
+                continue;
+            default:
+                continue;
+        }
+        break;
+    }
+}
+
+void
+jouga_d(void)
+{
+    nxtButton btn;
+    display_clear(0);
+    
+    for(;;){
+      display_goto_xy(0,1);
+      display_string("p_gain:");
+      display_int((KP+p)*100,4);
+      display_goto_xy(0,3);
+      display_string("i_gain:");
+      display_int((KI+i)*100,4);
+      display_goto_xy(0,5);
+      display_string("d_gain:");
+      display_int((KD+d)*100,4);
+      display_update();
+      btn = get_btn();
+      switch (btn) {
+      case Cbtn: //グレーボタン == キャンセル
+	break;
+      case Rbtn: //右ボタン　＝＝　＋0.01
+	d += 0.01;
+	continue;
+      case Lbtn: //左ボタン == -0.01
+	d -= 0.01;
+	continue;
+      default:
+	continue;
+      }
+      break;
+    }
+}
+
 void
 jouga_light(void)
 {
@@ -178,15 +303,16 @@ jouga_color(void)
 {
 	jouga_algorithm = algorithm_color;
 }
-
 void
 jouga_dual(void)
 {
-	jouga_algorithm = algorithm_dual;
+  jouga_algorithm = algorithm_dual;
 }
-void jouga_straight (void) {
-  jouga_algorithm = algorithm_staright;
+void jouga_straight (void)
+{
+  jouga_algorithm = algorithm_straight;
 }
+
 
 /*
  * アルゴリズム実現関数群
@@ -194,59 +320,105 @@ void jouga_straight (void) {
  *	周期タイマがセマフォを操作することで定期的に起動される
  *	ここを直すことで考えているアルゴリズムを実現できる
  */
-void
-algorithm_light(void)
-{
-  for(;;) {
-    wai_sem(Stskc);	// セマフォを待つことで定期的な実行を実現
-    lval = get_light_sensor(Light);
-    if (lval > (lhigh + llow) / 2) {		// 閾値より大きいとき
-      motor_set_speed(Rmotor, HIGHPOWER, 1);
-      motor_set_speed(Lmotor, LOWPOWER, 1);
-    } else {					// 閾値より小さいとき
-      motor_set_speed(Lmotor, HIGHPOWER, 1);
-      motor_set_speed(Rmotor, LOWPOWER, 1);
-    }
-  }
+
+int spd_limit(double val){
+    if(val > 100.0) return 100;
+    else if(val < -100.0) return -100;
+    else return (int)val;
 }
+
+void algorithm_light(void)
+{
+    double turn, error, prev_err = 0.0;
+    double integral = 0.0, derivative = 0.0;
+    int lspeed, rspeed;
+    
+    double T_LVAL = (lhigh + llow) / 2.0;
+    for(;;) {
+        wai_sem(Stskc);    // セマフォを待つことで定期的な実行を実現
+        lval = get_light_sensor(Light);
+        
+        error = (lval - T_LVAL) / (lhigh - llow) * 100.0; // Error in percentage
+        integral = 0.9*integral + error; // unwind when the sign change? Add *dt?
+        derivative = error - prev_err; // Add /dt?
+        turn = (KP+p)*error + KI*integral + KD*derivative;
+        
+        rspeed = spd_limit(T_POW+turn);
+        lspeed = spd_limit(T_POW-turn);
+        motor_set_speed(Rmotor, rspeed, 1);
+        motor_set_speed(Lmotor, lspeed, 1);
+        prev_err = error;
+        // dly_tsk()?
+    }
+}
+int turn = 0;    //操作量
 
 void
 algorithm_color(void)
 {
   for(;;) {
     wai_sem(Stskc);	// セマフォを待つことで定期的な実行を実現
-    cval = get_light_sensor(Color);
-    if (cval > (chigh + clow) / 2) {		// 閾値より大きいとき
+    cval = get_light_sensor(Color);     //現在の色
+    turn = (cval - (chigh + clow) / 2) * KP;
+    /* if (cval > (chighl + clow) / 2) {		// 閾値より大きいとき
       motor_set_speed(Lmotor, HIGHPOWER, 1);
       motor_set_speed(Rmotor, LOWPOWER, 1);
     } else {					// 閾値より小さいとき
       motor_set_speed(Rmotor, HIGHPOWER, 1);
       motor_set_speed(Lmotor, LOWPOWER, 1);
+      }*/
+
+    if(100 < turn)turn = 100;
+    if(turn < -100)turn = -100;
+
+    if(turn <= 0){    //左に曲がる
+      motor_set_speed(Lmotor, 100+turn, 1);
+    }else{
+      motor_set_speed(Rmotor, 100-turn, 1);
     }
+
+
   }
 }
 
-void
-algorithm_dual(void)
+double p_gain, d_gain; // 比例ゲイン, 微分ゲイン
+double lmotor_spd, rmotor_spd; // それぞれのモーターのスピードの減算値
+double diff_l = 0, diff_c = 0; // 前回の偏差量 微分制御による加算値
+double prev_lmotor_spd = 0, prev_rmotor_spd = 0; //前回計測時の各モータのスピード
+
+void algorithm_dual(void)
 {
   for(;;) {
     wai_sem(Stskc);	// セマフォを待つことで定期的な実行を実現
     lval = get_light_sensor(Light);
     cval = get_light_sensor(Color);
 
-    // ライトセンサーと右モーターの関係
-    if (lval > (lhigh + llow) / 2) {		// 閾値より明るいとき
-      motor_set_speed(Rmotor, HIGHPOWER, 1);
-    } else {					// 閾値より暗いとき
-      motor_set_speed(Rmotor, LOWPOWER, 1);
-    }
+    // 各ゲインの設定
+    p_gain = 0.90; // いじれる
+    d_gain = 0.30;  // いじれる
 
-    // カラーセンサーと左モーターの関係
-    if (cval > (chigh + clow) / 2) {		// 閾値より明るいとき
-      motor_set_speed(Lmotor, HIGHPOWER, 1);
-    } else {					// 閾値より暗いとき
-      motor_set_speed(Lmotor, LOWPOWER, 1);
-    }
+    // 微分制御に必要な値の算出
+    now_l = lval;
+    now_c = cval;
+    diff_l = 100.0 * (double)(lval - prev_l) / (lhigh - llow);
+    diff_c = 100.0 * (double)(cval - prev_c) / (chigh - clow);
+    
+    // 現在の光量に対する速度の計算
+    lmotor_spd = p_gain * 100.0 * (lval - llow) / (lhigh - llow) + d_gain * diff_l;
+    rmotor_spd = p_gain * 100.0 * (cval - clow) / (chigh - clow) + d_gain * diff_c;
+
+    // 値域の修正
+    lmotor_spd = spd_limit(lmotor_spd);
+    rmotor_spd = spd_limit(rmotor_spd);
+
+    motor_set_speed(Lmotor, rmotor_spd, 1);
+    motor_set_speed(Rmotor, lmotor_spd, 1);
+    
+    // 値の更新
+    prev_l = now_l;
+    prev_c = now_c;
+    prev_lmotor_spd = lmotor_spd;
+    prev_rmotor_spd = rmotor_spd;
   }
 }
 
@@ -254,25 +426,6 @@ algorithm_dual(void)
  *　ペナルティ計測用の関数
  */
 
-enum StraightState {
-  None,
-  WhiteStraight,
-  ArrivedFirstCircle, 
-  ArrivedSecondCircle,
-  ArrivedThirdCircle, 
-  ArrivedFourthCircle,
-  StateNum,
-};
-
-// センサーで取得した値を元に計算した色
-enum CalculatedColor {
-  Black, 
-  White, 
-  GRAY, 
-  ColorNum,
-};
-  enum StraightState myState = None;        // 現在のロボットの状態
-  enum CalculatedColor nextColor = ColorNum;
 // 左右のモーターの回転数を修正するための関数
 void AdjustDirect(const int subMotorCount) {
   // 回転角度によって速度修正(修正の必要があるときだけ呼ばれる)
@@ -305,9 +458,27 @@ int CalcColor(const int cval, const int lval, const int range) {
     }
 }
 void algorithm_straight(void) {
-
+  enum StraightState {
+    None,
+    WhiteStraight,
+    ArrivedFirstCircle, 
+    ArrivedSecondCircle,
+    ArrivedThirdCircle, 
+    ArrivedFourthCircle,
+    StateNum,
+  };
+  
+  // センサーで取得した値を元に計算した色
+  enum CalculatedColor {
+    Black, 
+    White, 
+    GRAY, 
+    ColorNum,
+  };
+  enum StraightState myState = None;        // 現在のロボットの状態
+  enum CalculatedColor nextColor = ColorNum;
   int range = 50;                          //  完全一致の黒色白色を感知するのは難しいので許容する範囲
-  int motorRange = 3;
+
   // 左右のモーターの回転数
   int RmotorCount = 0;
   int LmotorCount = 0;
@@ -318,23 +489,43 @@ void algorithm_straight(void) {
   /*---------------発進動作-----------------------*/
   motor_set_speed(Rmotor, HIGHPOWER, 1);
   motor_set_speed(Lmotor, HIGHPOWER, 1);
+  nxt_motor_set_count(Rmotor, 0);
+  nxt_motor_set_count(Lmotor, 0);
   for (;;) {
     wai_sem(Stskc);	// セマフォを待つことで定期的な実行を実現
     /*-------------------------データ取得ルーチン-----------------------*/
     // 光と色センサーで値取得
     cval = get_light_sensor(Color);
     lval = get_light_sensor(Light);
-    // タイヤの回転数をどんどん計測していく. (完全に0にはならないかも(一つの指標として0))
-    if (nxt_motor_get_count(Rmotor) >= 360 - motorRange || nxt_motor_get_count(Rmotor) <= motorRange) {
-      RmotorCount++;
-    }
-    if (nxt_motor_get_count(Lmotor) >= 360 - motorRange || nxt_motor_get_count(Lmotor) <= motorRange) {
-      LmotorCount++;
-    }
+    // タイヤの回転数をどんどん計測していく. (nxt_motor_get_countは360度ごとに0にリセットされない)
+    RmotorCount = (int)nxt_motor_get_count(Rmotor) / 360;
+    LmotorCount = (int)nxt_motor_get_count(Lmotor) / 360;
     // 左右のモーターを修正する必要があるかを計算
     subMotorCount = RmotorCount - LmotorCount;
     nextColor = CalcColor(cval, lval, range);
     /*---------------------------------------------------------*/
+
+    /*---------------DisplayState--------------*/
+    
+    /*Rモーター, Lモーターの回転角*/
+    display_goto_xy(1, 3);
+    display_string("R : ");
+    display_int(nxt_motor_get_count(Rmotor), 4);
+    display_string("  Rm: ");
+    display_int(RmotorCount, 4);
+    display_goto_xy(1, 4);
+    display_string("L : ");
+    display_int(nxt_motor_get_count(Lmotor), 4);
+    display_string("  Lm : ");
+    display_int(Lmotor, 4);
+    display_goto_xy(1, 5);
+    display_string("State: ");
+    display_int(myState, 4);
+    display_goto_xy(1, 6);
+    display_string("Color : ");
+    display_int(nextColor, 4);
+    display_update();//
+    /*----------------------------------------------*/
     if ((RmotorCount >= 15 && LmotorCount >= 15) && (myState == None)) {
       myState = WhiteStraight;
     }
@@ -382,7 +573,7 @@ void algorithm_straight(void) {
         break;
       // 2個目の白円到達後
       case ArrivedFourthCircle:
-          myState = null;
+          myState = None;
           motor_set_speed(Rmotor, 0, 1);
           motor_set_speed(Lmotor, 0, 1);
         break;
@@ -499,18 +690,6 @@ DispTsk(VP_INT exinf)
   display_string("  ");
   display_int(cval, 4);
   display_goto_xy(3, 5);
-  /*Rモーター, Lモーターの回転角*/
-  display_string("R : ");
-  display_int(nxt_motor_get_count(Rmotor), 4);
-  display_goto_xy(3, 6);
-  display_string("L : ");
-  display_int(nxt_motor_get_counst(Lmotor), 4);
-  display_goto_xy(3, 7);
-  display_string("State: ");
-  display_int(StraightState);
-  display_goto_xy(3, 8);
-  display_string("Color : ");
-  display_int(CalculatedColor);
   display_update();
 }
 
@@ -575,7 +754,7 @@ void
 jsp_systick_low_priority(void)
 {
   if (get_OS_flag()) {
-    isig_tim();		// 今回はタイマを使っているのでこの呼び出しが必要
+    isig_tim();     	// 今回はタイマを使っているのでこの呼び出しが必要
   }
 }
 
