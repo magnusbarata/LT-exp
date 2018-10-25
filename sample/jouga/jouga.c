@@ -28,10 +28,11 @@ void calibration_func(void);
 void jouga_light(void);
 void jouga_color(void);
 void jouga_dual(void);
+void jouga_straight(void);
 void algorithm_light(void);
 void algorithm_color(void);
 void algorithm_dual(void);
-void jouga_straight(void);
+void algorithm_straight(void);
 
 /* 外部変数の定義 */
 char name[17];
@@ -183,7 +184,9 @@ jouga_dual(void)
 {
 	jouga_algorithm = algorithm_dual;
 }
-
+void jouga_straight (void) {
+  jouga_algorithm = algorithm_staright;
+}
 
 /*
  * アルゴリズム実現関数群
@@ -251,6 +254,25 @@ algorithm_dual(void)
  *　ペナルティ計測用の関数
  */
 
+enum StraightState {
+  None,
+  WhiteStraight,
+  ArrivedFirstCircle, 
+  ArrivedSecondCircle,
+  ArrivedThirdCircle, 
+  ArrivedFourthCircle,
+  StateNum,
+};
+
+// センサーで取得した値を元に計算した色
+enum CalculatedColor {
+  Black, 
+  White, 
+  GRAY, 
+  ColorNum,
+};
+  enum StraightState myState = None;        // 現在のロボットの状態
+  enum CalculatedColor nextColor = ColorNum;
 // 左右のモーターの回転数を修正するための関数
 void AdjustDirect(const int subMotorCount) {
   // 回転角度によって速度修正(修正の必要があるときだけ呼ばれる)
@@ -282,27 +304,8 @@ int CalcColor(const int cval, const int lval, const int range) {
       return 2;  //グレー
     }
 }
-void jouga_straight(void) {
-  enum StraightState {
-    None,
-    WhiteStraight,
-    ArrivedFirstCircle, 
-    ArrivedSecondCircle,
-    ArrivedThirdCircle, 
-    ArrivedFourthCircle,
-    StateNum,
-  };
-  
-  // センサーで取得した値を元に計算した色
-  enum CalculatedColor {
-    Black, 
-    White, 
-    GRAY, 
-    ColorNum,
-  };
+void algorithm_straight(void) {
 
-  enum StraightState myState = None;        // 現在のロボットの状態
-  enum CalculatedColor nextColor = ColorNum;
   int range = 50;                          //  完全一致の黒色白色を感知するのは難しいので許容する範囲
   int motorRange = 3;
   // 左右のモーターの回転数
@@ -311,11 +314,12 @@ void jouga_straight(void) {
   int subMotorCount = RmotorCount - LmotorCount;
   int isAdjusting = 0;
 
-  // int baseCount[6] ={};                        // 最低限満たすべきモーターの回転数(直線で進むのが最短距離なのでこれ以上短くなることはない)
+  int baseCount[6] ={0};                        // 最低限満たすべきモーターの回転数(直線で進むのが最短距離なのでこれ以上短くなることはない)
   /*---------------発進動作-----------------------*/
   motor_set_speed(Rmotor, HIGHPOWER, 1);
   motor_set_speed(Lmotor, HIGHPOWER, 1);
   for (;;) {
+    wai_sem(Stskc);	// セマフォを待つことで定期的な実行を実現
     /*-------------------------データ取得ルーチン-----------------------*/
     // 光と色センサーで値取得
     cval = get_light_sensor(Color);
@@ -487,7 +491,7 @@ DispTsk(VP_INT exinf)
   /* システム名の表示 */
   display_goto_xy(0, 0);
   display_string(name);
-  display_string(" status");
+  display_string("status");
 
   /* センサーの読み取り値の表示 */
   display_goto_xy(3, 3);
@@ -498,9 +502,15 @@ DispTsk(VP_INT exinf)
   /*Rモーター, Lモーターの回転角*/
   display_string("R : ");
   display_int(nxt_motor_get_count(Rmotor), 4);
-  display_string("  L : ");
+  display_goto_xy(3, 6);
+  display_string("L : ");
   display_int(nxt_motor_get_counst(Lmotor), 4);
-
+  display_goto_xy(3, 7);
+  display_string("State: ");
+  display_int(StraightState);
+  display_goto_xy(3, 8);
+  display_string("Color : ");
+  display_int(CalculatedColor);
   display_update();
 }
 
