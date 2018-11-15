@@ -56,7 +56,7 @@ char name[17];
 int llow = LOWVAL, lhigh = HIGHVAL;
 int clow = LOWVAL, chigh = HIGHVAL;
 int lval, cval;
-void (*jouga_algorithm)(void) = algorithm_light; // デフォルトの設定
+void (*jouga_algorithm)(void) = algorithm_collect; // デフォルトの設定
 
 NameFunc MainMenu[] = {
     {"Main Menu", NULL},
@@ -179,11 +179,13 @@ void calibration_func(void)
   nxtButton btn;
   int lmin, lmax;
   int cmin, cmax;
+  int rgbVal[3], rgbMin[3], rgbMax[3];
   int i;
 
   display_clear(0);
   lmin = lmax = get_light_sensor(Light);
   cmin = cmax = get_light_sensor(Color);
+  ecrobot_get_nxtcolorsensor_rgb(Color, rgbVal);
 
   // しばらくの間データを取得
   for (i = 0; i < 150; i++)
@@ -191,6 +193,8 @@ void calibration_func(void)
     dly_tsk(20);
     lval = get_light_sensor(Light);
     cval = get_light_sensor(Color);
+    ecrobot_get_nxtcolorsensor_rgb(Color, rgbVal);
+
     if (lval < lmin)
       lmin = lval;
     if (lval > lmax)
@@ -199,18 +203,33 @@ void calibration_func(void)
       cmin = cval;
     if (cval > cmax)
       cmax = cval;
+
+    for (i = 0; i < 3; i++)
+    {
+      if (rgbVal[i] < rgbMin[i])
+      {
+        rgbMin[i] = rebVal[i];
+      }
+      if (rgbVal[i] > rgbMax[i])
+      {
+        rgbMax[i] = rebVal[i];
+      }
+    }
     display_goto_xy(0, 1);
-    display_string("cur: ");
-    display_int(lval, 4);
-    display_int(cval, 4);
+    display_string("rgb:");
+    display_int(rgbVal[0], 4);
+    display_int(rgbVal[1], 4);
+    display_int(rgbVal[2], 4);
+
     display_goto_xy(0, 3);
     display_string("min: ");
-    display_int(lmin, 4);
-    display_int(cmin, 4);
-    display_goto_xy(0, 5);
+    display_int(rgbMin[0], 4);
+    display_int(rgbMin[1], 4);
+    display_int(rgbMin[2], 4);
     display_string("max: ");
-    display_int(lmax, 4);
-    display_int(cmax, 4);
+    display_int(rgbMax[0], 4);
+    display_int(rgbMax[1], 4);
+    display_int(rgbMax[2], 4);
     display_update();
   }
   // データ取得終了
@@ -254,7 +273,7 @@ void algorithm_collect()
   // 左右のモーターの回転数
   int RmotorCount = 0;
   int LmotorCount = 0;
-  int sensorColor;
+  enum Color sensorColor;
 
   /*---------------発進動作-----------------------*/
   motor_set_speed(Rmotor, 0, 1);
@@ -262,6 +281,8 @@ void algorithm_collect()
   // 左右のモーターの累計回転数を0にリセット
   nxt_motor_set_count(Rmotor, 0);
   nxt_motor_set_count(Lmotor, 0);
+
+  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   for (;;)
   {
     wai_sem(Stskc); // セマフォを待つことで定期的な実行を実現
@@ -273,7 +294,7 @@ void algorithm_collect()
     RmotorCount = (int)nxt_motor_get_count(Rmotor) / 360;
     LmotorCount = (int)nxt_motor_get_count(Lmotor) / 360;
     // センサーカラーを取得
-    sensorColor = get_color_sensor;
+    sensorColor = get_color_sensor();
 
     /*---------------------------------------------------------*/
 
@@ -284,171 +305,190 @@ void algorithm_collect()
     display_int(sensorColor, 4);
     display_goto_xy(0, 5);
     display_string("SonarSensor : ");
-    display_int(ecrobot_get_sonar_sensor(Touch));
+    display_int(ecrobot_get_sonar_sensor(Touch, 4));
     display_update(); //
     /*----------------------------------------------*/
   }
+}
 
-  /*
+/*
+ * TASK: InitTsk
+ *	初期設定を行うタスク
+ */
+void InitTsk(VP_INT exinf)
+{
+  display_clear(0); // なにはともあれ、画面をクリア
+  display_goto_xy(2, 3);
+  display_string("Initializing");
+  display_update();
+  // カラーセンサーを使う場合にはライトセンサーとして使う
+  // REDが一番ダイナミックレンジが広いようなので、あえてWHITEでなくREDで
+  ecrobot_set_nxtcolorsensor(Color, NXT_LIGHTSENSOR_RED);
+  ecrobot_get_bt_device_name(name); // システム名の取得
+
+  act_tsk(Tmain);
+}
+
+/*
  * TASK: MainTsk
  *	周期起動用のタイマを起動して終了
  */
-  void MainTsk(VP_INT exinf)
-  {
-    // ここにくるのにボタンを押しているので、
-    // ボタンが押されていない状態になるまで待つ
-    wait_for_release();
-    wai_sem(Snbtn); // ボタンに関する権利を取得
-    // メインメニューの表示
-    func_menu(MainMenu, ARRAYSIZE(MainMenu));
-    sig_sem(Snbtn); // ボタンに関する権利を開放
+void MainTsk(VP_INT exinf)
+{
+  // ここにくるのにボタンを押しているので、
+  // ボタンが押されていない状態になるまで待つ
+  wait_for_release();
+  wai_sem(Snbtn); // ボタンに関する権利を取得
+  // メインメニューの表示
+  func_menu(MainMenu, ARRAYSIZE(MainMenu));
+  sig_sem(Snbtn); // ボタンに関する権利を開放
 
-    // 画面をきれいにする
-    display_clear(0);
-    display_goto_xy(0, 0);
-    display_update();
+  // 画面をきれいにする
+  display_clear(0);
+  display_goto_xy(0, 0);
+  display_update();
 
-    // BGM用のタスクを起動
-    act_tsk(Tmusc);
+  // BGM用のタスクを起動
+  act_tsk(Tmusc);
 
-    // 移動用のタスクを起動
-    act_tsk(Tmove);
+  // 移動用のタスクを起動
+  act_tsk(Tmove);
 
-    // 表示用のタスクを定期起動するためのタイマを起動
-    sta_cyc(Cdisp);
-  }
+  // 表示用のタスクを定期起動するためのタイマを起動
+  sta_cyc(Cdisp);
+}
 
-  /*
+/*
  * TASK: MoveTsk
  *	実際に機体を動かす
  *	周期タイマがセマフォを操作することで定期的に起動される
  *	たぶん、ここを直すことで考えているアルゴリズムを実現できる
  */
-  void MoveTsk(VP_INT exinf)
-  {
-    sta_cyc(Cmove); // 定期的にセマフォを上げるタイマ
+void MoveTsk(VP_INT exinf)
+{
+  sta_cyc(Cmove); // 定期的にセマフォを上げるタイマ
 
-    (*jouga_algorithm)(); // 実際の処理
-  }
+  (*jouga_algorithm)(); // 実際の処理
+}
 
-  /*
+/*
  * TASK: MuscTsk
  *	BGMを奏でる
  *	実体はmusic.cにある
  */
-  void MuscTsk(VP_INT exinf)
-  {
-    // 延々と大学歌を奏で続ける
-    // for (;;)
-    // {
-    //   play_notes(TIMING_chiba_univ, 8, chiba_univ);
-    // }
-  }
+void MuscTsk(VP_INT exinf)
+{
+  // 延々と大学歌を奏で続ける
+  // for (;;)
+  // {
+  //   play_notes(TIMING_chiba_univ, 8, chiba_univ);
+  // }
+}
 
-  /*
+/*
  * TASK: DispTsk
  *	通常動作時にシステム内の様子を表示
  *	周期タイマにより定期的に起動される
  */
-  void DispTsk(VP_INT exinf)
-  {
-    display_clear(0);
+void DispTsk(VP_INT exinf)
+{
+  display_clear(0);
 
-    /* システム名の表示 */
-    display_goto_xy(0, 0);
-    display_string(name);
-    display_string(" status");
+  /* システム名の表示 */
+  display_goto_xy(0, 0);
+  display_string(name);
+  display_string(" status");
 
-    /* センサーの読み取り値の表示 */
-    display_goto_xy(3, 3);
-    display_int(lval, 4);
-    display_string("  ");
-    display_int(cval, 4);
+  /* センサーの読み取り値の表示 */
+  display_goto_xy(3, 3);
+  display_int(lval, 4);
+  display_string("  ");
+  display_int(cval, 4);
 
-    display_update();
-  }
+  display_update();
+}
 
-  /*
+/*
  * TASK: IdleTsk
  *	Idle時に動作する（優先順位は低い）
  *	Cyclic Timerでなくdly_tskしているのは、
  *	セマフォで待っているときに複数起動しても意味がないため
  */
-  void IdleTsk(VP_INT exinf)
+void IdleTsk(VP_INT exinf)
+{
+  for (;;)
   {
-    for (;;)
+    wai_sem(Snbtn); // InitTskとNXTボタンを取り合う
+    check_NXT_buttons();
+    if (ecrobot_is_ENTER_button_pressed())
     {
-      wai_sem(Snbtn); // InitTskとNXTボタンを取り合う
-      check_NXT_buttons();
-      if (ecrobot_is_ENTER_button_pressed())
-      {
-        stp_cyc(Cmove);
-        stp_cyc(Cdisp);
-        ter_tsk(Tmove);
-        ter_tsk(Tmusc);
-        ter_tsk(Tmain);
-        nxt_motor_set_speed(Rmotor, 0, 0);
-        nxt_motor_set_speed(Lmotor, 0, 0);
-        act_tsk(Tmain);
-      }
-      sig_sem(Snbtn); // NXTボタンの権利を返却
-      dly_tsk(10);
+      stp_cyc(Cmove);
+      stp_cyc(Cdisp);
+      ter_tsk(Tmove);
+      ter_tsk(Tmusc);
+      ter_tsk(Tmain);
+      nxt_motor_set_speed(Rmotor, 0, 0);
+      nxt_motor_set_speed(Lmotor, 0, 0);
+      act_tsk(Tmain);
     }
+    sig_sem(Snbtn); // NXTボタンの権利を返却
+    dly_tsk(10);
   }
+}
 
-  /*
+/*
  * TASK: ColsTsk
  *	Idle時にカラーセンサー用に値を読み込む
  */
-  void ColsTsk(VP_INT exinf)
+void ColsTsk(VP_INT exinf)
+{
+  for (;;)
   {
-    for (;;)
-    {
-      ecrobot_process_bg_nxtcolorsensor();
-      dly_tsk(2);
-    }
+    ecrobot_process_bg_nxtcolorsensor();
+    dly_tsk(2);
   }
+}
 
-  /*
+/*
  * 周期タイマ
  *	タスクを定期的に起動するだけ
  */
-  void MoveCyc(VP_INT exinf)
-  {
-    isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
-  }
+void MoveCyc(VP_INT exinf)
+{
+  isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
+}
 
-  void DispCyc(VP_INT exinf)
-  {
-    iact_tsk(Tdisp); // DispTskを定期的に起動
-  }
+void DispCyc(VP_INT exinf)
+{
+  iact_tsk(Tdisp); // DispTskを定期的に起動
+}
 
-  /* OSにより1msごとに呼び出される */
-  void jsp_systick_low_priority(void)
+/* OSにより1msごとに呼び出される */
+void jsp_systick_low_priority(void)
+{
+  if (get_OS_flag())
   {
-    if (get_OS_flag())
-    {
-      isig_tim(); // 今回はタイマを使っているのでこの呼び出しが必要
-    }
+    isig_tim(); // 今回はタイマを使っているのでこの呼び出しが必要
   }
+}
 
-  /* システムの初期化ルーチン */
-  void ecrobot_device_initialize(void)
-  {
+/* システムの初期化ルーチン */
+void ecrobot_device_initialize(void)
+{
 
-    nxt_motor_set_speed(Rmotor, 0, 0);
-    nxt_motor_set_speed(Lmotor, 0, 0);
-    ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
-    ecrobot_init_sonar_sensor(Sonar);
-    ecrobot_set_light_sensor_active(Light);
-  }
+  nxt_motor_set_speed(Rmotor, 0, 0);
+  nxt_motor_set_speed(Lmotor, 0, 0);
+  ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
+  ecrobot_init_sonar_sensor(Sonar);
+  ecrobot_set_light_sensor_active(Light);
+}
 
-  /* システム停止時に呼ばれるルーチン */
-  void ecrobot_device_terminate(void)
-  {
-    nxt_motor_set_speed(Rmotor, 0, 1);
-    nxt_motor_set_speed(Lmotor, 0, 1);
-    ecrobot_term_nxtcolorsensor(Color);
-    ecrobot_term_sonar_sensor(Touch);
-    ecrobot_set_light_sensor_inactive(Light);
-  }
+/* システム停止時に呼ばれるルーチン */
+void ecrobot_device_terminate(void)
+{
+  nxt_motor_set_speed(Rmotor, 0, 1);
+  nxt_motor_set_speed(Lmotor, 0, 1);
+  ecrobot_term_nxtcolorsensor(Color);
+  ecrobot_term_sonar_sensor(Touch);
+  ecrobot_set_light_sensor_inactive(Light);
+}
