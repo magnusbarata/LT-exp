@@ -25,10 +25,11 @@ typedef enum
 {
 	Rmotor = NXT_PORT_B,
 	Lmotor = NXT_PORT_C,
-	Light = NXT_PORT_S3,
-	Color = NXT_PORT_S4,
 	Touch = NXT_PORT_S1,
 	Sonar = NXT_PORT_S2,
+	Light = NXT_PORT_S3,
+	Color = NXT_PORT_S4,
+
 } DeviceConstants;
 #endif
 

@@ -16,8 +16,6 @@
 
 #define ARRAYSIZE(A) (sizeof((A)) / sizeof((A)[0]))
 
-#define STR(var) #var // enum型の列挙子を文字列入力するために宣言(あまり多用すべきではないらしい...)
-
 /* 型や関数の宣言 */
 typedef void (*MFunc)(void);
 typedef struct _NameFunc
@@ -26,21 +24,10 @@ typedef struct _NameFunc
   MFunc func;
 } NameFunc;
 
-void calibration_func(void);
-void jouga_collect(void);
-void algorithm_collect(void);
-
-/* 外部変数の定義 */
-char name[17];
-int lval, cval;
-int llow = LOWVAL, lhigh = HIGHVAL;
-int clow = LOWVAL, chigh = HIGHVAL;
-void (*jouga_algorithm)(void) = algorithm_light; // デフォルトの設定
-
 enum Color
 {
   // 青, ピンク、赤, 水色, 緑、黄色, 黒, 白, None
-  Blue,
+  Blue = 0,
   Pink,
   Red,
   LightBlue,
@@ -48,9 +35,28 @@ enum Color
   Yellow,
   Black,
   White,
-  None,
   ColorNum,
 };
+const int colorNum = ColorNum;
+
+typedef struct _ColorInfo
+{
+  enum Color color;
+  // cmax, cminをRGBまで細分化したもの
+  int maxRGB[3];
+  int minRGB[3];
+} ColorInfo;
+
+void calibration_func(void);
+void jouga_collect(void);
+void algorithm_collect(void);
+
+/* 外部変数の定義 */
+char name[17];
+int llow = LOWVAL, lhigh = HIGHVAL;
+int clow = LOWVAL, chigh = HIGHVAL;
+int lval, cval;
+void (*jouga_algorithm)(void) = algorithm_light; // デフォルトの設定
 
 NameFunc MainMenu[] = {
     {"Main Menu", NULL},
@@ -100,7 +106,7 @@ enum Color get_color_sensor()
   case NXT_COLOR_UNKNOWN:
     return LightBlue;
   default:
-    return None;
+    return ColorNum;
   }
 }
 
@@ -176,8 +182,6 @@ void calibration_func(void)
   int i;
 
   display_clear(0);
-  motor_set_speed(Lmotor, LOWPOWER / 3 + 10, 1);
-  motor_set_speed(Rmotor, LOWPOWER / 3 + 10, 1);
   lmin = lmax = get_light_sensor(Light);
   cmin = cmax = get_light_sensor(Color);
 
@@ -250,11 +254,11 @@ void algorithm_collect()
   // 左右のモーターの回転数
   int RmotorCount = 0;
   int LmotorCount = 0;
-  enum Color sensorColor;
+  int sensorColor;
 
   /*---------------発進動作-----------------------*/
-  motor_set_speed(Rmotor, HIGHPOWER, 1);
-  motor_set_speed(Lmotor, HIGHPOWER, 1);
+  motor_set_speed(Rmotor, 0, 1);
+  motor_set_speed(Lmotor, 0, 1);
   // 左右のモーターの累計回転数を0にリセット
   nxt_motor_set_count(Rmotor, 0);
   nxt_motor_set_count(Lmotor, 0);
@@ -276,10 +280,9 @@ void algorithm_collect()
     /*---------------DisplayState--------------*/
 
     /*Rモーター, Lモーターの回転角*/
-    display_goto_xy(1, 3);
-    display_string("SensorColor : ");
-    display_string(STR(sensorColor));
-    display_goto_xy(1, 4);
+    display_goto_xy(0, 4);
+    display_int(sensorColor, 4);
+    display_goto_xy(0, 5);
     display_string("SonarSensor : ");
     display_int(ecrobot_get_sonar_sensor(Touch));
     display_update(); //
@@ -336,10 +339,10 @@ void algorithm_collect()
   void MuscTsk(VP_INT exinf)
   {
     // 延々と大学歌を奏で続ける
-    for (;;)
-    {
-      play_notes(TIMING_chiba_univ, 8, chiba_univ);
-    }
+    // for (;;)
+    // {
+    //   play_notes(TIMING_chiba_univ, 8, chiba_univ);
+    // }
   }
 
   /*
@@ -432,10 +435,11 @@ void algorithm_collect()
   /* システムの初期化ルーチン */
   void ecrobot_device_initialize(void)
   {
+
     nxt_motor_set_speed(Rmotor, 0, 0);
     nxt_motor_set_speed(Lmotor, 0, 0);
     ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
-    ecrobot_inti_sonar_sensor(Touch);
+    ecrobot_init_sonar_sensor(Sonar);
     ecrobot_set_light_sensor_active(Light);
   }
 
