@@ -1,0 +1,32 @@
+<?php 
+?>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>RGB_test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="test.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="test.js"></script>
+
+</head>
+
+<body>
+    <div id="box">
+
+    </div>
+    <p id="color">color : </p>
+
+    <form id="color">
+        <label for="colorPicker">
+            <input type="color" id="colorPicker">
+        </label>
+        <input type="button" value="送信" onclick="get_color_sensor((r, g, b) => outputColor(r, g, b))">
+    </form>
+
+</body>
+
+</html>

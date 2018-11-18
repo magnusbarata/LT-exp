@@ -31,10 +31,11 @@ enum Color
   Pink,
   Red,
   LightBlue,
-  Green,
+  LightGreen,
   Yellow,
   Black,
   White,
+  UnkonwnColor,
   ColorNum,
 };
 const int colorNum = ColorNum;
@@ -80,34 +81,71 @@ int get_light_sensor(int Sensor)
   }
 }
 
+int CalcRGBPosition (const int rgb) {
+  // rgbの値を3つの領域に分けるためのパーティションパラメータ
+  int partitionMin = (int) 255 / 3;
+  int partitionMax = partitionMin * 2;
+  if (rgb < partitionMin) {
+    return 0;
+  }
+  else if (rgb < partitionMax) {
+    return 1;
+  }
+  else {
+    return 2;
+  }
+}
+
 enum Color get_color_sensor()
 {
+  // Red, Green, Blue
   int rgb[3] = {};
 
-  // RGBの生データを取得する↓
-  // ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
+  // RGBの生データを取得する
+  ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
 
-  // RGB調査
+  int redPosition = CalcRGBPosition(rgb[0]);
+  int greenPosition = CalcRGBPosition(rgb[1]);
+  int bluePosition = CalcRGBPosition(rgb[2]);
 
-  switch (ecrobot_get_nxtcolorsensor_id(Color))
-  {
-  case NXT_COLOR_BLACK:
-    return Black;
-  case NXT_COLOR_BLUE:
-    return Blue;
-  case NXT_COLOR_GREEN:
-    return Green;
-  case NXT_COLOR_YELLOW:
-    return Yellow;
-  case NXT_COLOR_RED:
-    return Red;
-  case NXT_COLOR_WHITE:
-    return White;
-  case NXT_COLOR_UNKNOWN:
-    return LightBlue;
-  default:
-    return ColorNum;
+  // Blue(0, 0, 255), LightBlue(0, 255, 255), Pink(255, 0, 255), Red(255, 0, 0), LightGreen(0, 255, 0), Green(0, 128, 0), Yellow(255, 255, 0), Black(0, 0, 0), 
+  // White(255, 255, 255)
+ 
+  switch (redPosition * 100 + greenPosition * 10 + bluePosition) {
+    case 000:
+      return Black;
+    case 100:
+    case 200:
+      return Red;
+    case 10:
+    case 11: 
+    case 20:
+    case 21:
+    case 120:
+      return Green;
+    case 001:
+    case 002:
+      return Blue;
+    case 22:
+    case 12:
+      return LightBlue;
+    case 201:
+    case 202:
+    case 212:
+    case 101:
+    case 102:
+      return Pink;
+    case 220:
+    case 221:
+    case 210:
+      return Yellow;
+    case 111:
+    case 222: 
+      return White;
+    default :
+      return UnkonwnColor;
   }
+
 }
 
 // 超音波センサーからrange[cm]に物体があるかどうか
