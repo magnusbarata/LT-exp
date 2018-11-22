@@ -17,9 +17,9 @@ void algorithm_colSensor(void){
     // Read Color value
     dly_tsk(100);
     ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
-    bits = bin(rgb[2], 200, 0) |
-           bin(rgb[1], 200, 1) |
-           bin(rgb[0], 200, 2);
+    bits = bin(col[0], 200, 2) |
+           bin(col[1], 200, 1) |
+           bin(col[2], 200, 0);
 
     // Display Color
     display_goto_xy(3, 7);
