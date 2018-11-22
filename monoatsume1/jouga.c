@@ -162,11 +162,11 @@ void dispTouch_func(void){
       U8 flag1 = ecrobot_get_touch_sensor(Touch1);  //if 1 = on, 0 = off
       U8 flag2 = ecrobot_get_touch_sensor(Touch2);  //if 1 = on, 0 = off
       display_goto_xy(0,2);
-      display_string("Right_touch:")
-      display_int(flag1);
+      display_string("Right_touch:"); // S1
+      display_int(flag1, 4);
       display_goto_xy(0,4);
-      display_string("Left_touch:")
-      display_int(flag2);
+      display_string("Left_touch:"); // S2
+      display_int(flag2, 4);
       display_update();
       switch(btn){
           case Cbtn:
@@ -178,7 +178,6 @@ void dispTouch_func(void){
   }
 
 }
-
 
 U8 bin(const int val, const int div, const int n){
   if(val > div) return 1 << n;
@@ -217,13 +216,13 @@ void dispColor_func(void){
       case 3:
         display_string("CYAN"); break;
       case 4:
-        display_string("RED");break;
+        display_string("RED"); break;
       case 5:
-        display_string("MAGENTA");break;
-      case 6: break;
-        display_string("YELLOW");
+        display_string("MAGENTA"); break;
+      case 6:
+        display_string("YELLOW"); break;
       case 7:
-        display_string("WHITE");break;
+        display_string("WHITE"); break;
     }
     display_update();
   }
