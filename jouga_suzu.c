@@ -214,20 +214,19 @@ void func_menu(NameFunc *tbl, int cnt)
     break;
   }
 }
-
 /* 白と黒のセンサーの読み取り値を校正 */
 void calibration_func(void)
 {
   nxtButton btn;
   int lmin, lmax;
   int cmin, cmax;
-  int rgbVal[3], rgbMin[3], rgbMax[3];
   int i;
 
   display_clear(0);
+  motor_set_speed(Lmotor, LOWPOWER / 3 + 10, 1);
+  motor_set_speed(Rmotor, LOWPOWER / 3 + 10, 1);
   lmin = lmax = get_light_sensor(Light);
   cmin = cmax = get_light_sensor(Color);
-  ecrobot_get_nxtcolorsensor_rgb(Color, rgbVal);
 
   // しばらくの間データを取得
   for (i = 0; i < 150; i++)
@@ -235,8 +234,6 @@ void calibration_func(void)
     dly_tsk(20);
     lval = get_light_sensor(Light);
     cval = get_light_sensor(Color);
-    ecrobot_get_nxtcolorsensor_rgb(Color, rgbVal);
-
     if (lval < lmin)
       lmin = lval;
     if (lval > lmax)
@@ -245,32 +242,18 @@ void calibration_func(void)
       cmin = cval;
     if (cval > cmax)
       cmax = cval;
-
-    for (i = 0; i < 3; i++)
-    {
-      if (rgbVal[i] < rgbMin[i])
-      {
-        rgbMin[i] = rgbVal[i];
-      }
-      if (rgbVal[i] > rgbMax[i])
-      {
-        rgbMax[i] = rgbVal[i];
-      }
-    }
     display_goto_xy(0, 1);
-    display_int(rgbVal[0], 4);
-    display_int(rgbVal[1], 4);
-    display_int(rgbVal[2], 4);
-
+    display_string("cur: ");
+    display_int(lval, 4);
+    display_int(cval, 4);
     display_goto_xy(0, 3);
-    display_string("min:");
-    display_int(rgbMin[0], 4);
-    display_int(rgbMin[1], 4);
-    display_int(rgbMin[2], 4);
-    display_string("max:");
-    display_int(rgbMax[0], 4);
-    display_int(rgbMax[1], 4);
-    display_int(rgbMax[2], 4);
+    display_string("min: ");
+    display_int(lmin, 4);
+    display_int(cmin, 4);
+    display_goto_xy(0, 5);
+    display_string("max: ");
+    display_int(lmax, 4);
+    display_int(cmax, 4);
     display_update();
   }
   // データ取得終了
