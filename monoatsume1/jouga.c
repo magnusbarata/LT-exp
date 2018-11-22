@@ -25,6 +25,7 @@ typedef struct _NameFunc {
 
 void calibration_func(void);
 void dispColor_func(void);
+void dispTouch_func(void);
 
 /* 外部変数の定義 */
 char name[17];
@@ -37,6 +38,7 @@ NameFunc MainMenu[] = {
   {"Main Menu", NULL},
   {"Calibration", calibration_func},	// センサーのキャリブレーション
   {"Display Color", dispColor_func},
+  {"Display Touch", dispTouch_func},
   {"Start", NULL},			// ライントレースの開始
   {"Exit", ecrobot_restart_NXT},	// OSの制御に戻る
 //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
@@ -151,57 +153,63 @@ calibration_func(void)
   chigh = cmax;
 }
 
+void dispTouch_func(void){
+  // Touch sensor display
+}
+
+
+u8 bin(const int val, const int div, const int n){
+  if(val > div) return 1 << n;
+  return 0 << n;
+}
+
+void dispColor_func(void){
+  S16 col[3];
+  u8 bits = 0;
+
+  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
+  for(;;){
+    // Read Color value
+    dly_tsk(100);
+    ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
+    bits = bin(col[0], 200, 2) |
+           bin(col[1], 200, 1) |
+           bin(col[2], 200, 0);
+
+    // Display Color
+    display_goto_xy(2, 2);
+    display_int(col[0], 4);
+    display_int(col[1], 4);
+    display_int(col[2], 4);
+    display_goto_xy(3, 7);
+    switch(bits){
+      case 0:
+        display_string("BLACK"); break;
+      case 1:
+        display_string("BLUE"); break;
+      case 2:
+        display_string("GREEN"); break;
+      case 3:
+        display_string("CYAN"); break;
+      case 4:
+        display_string("RED");break;
+      case 5:
+        display_string("MAGENTA");break;
+      case 6: break;
+        display_string("YELLOW");
+      case 7:
+        display_string("WHITE");break;
+    }
+    display_update();
+  }
+}
+
 /*
  * アルゴリズム実現関数群
  *	実際に機体を動かす
  *	周期タイマがセマフォを操作することで定期的に起動される
  *	ここを直すことで考えているアルゴリズムを実現できる
  */
- u8 bin(const int val, const int div, const int n){
-   if(val > div) return 1 << n;
-   return 0 << n;
- }
-
- void dispColor_func(void){
-   S16 col[3];
-   u8 bits = 0;
-
-   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
-   for(;;){
-     // Read Color value
-     dly_tsk(100);
-     ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
-     bits = bin(col[0], 200, 2) |
-            bin(col[1], 200, 1) |
-            bin(col[2], 200, 0);
-
-     // Display Color
-     display_goto_xy(2, 2);
-     display_int(col[0], 4);
-     display_int(col[1], 4);
-     display_int(col[2], 4);
-     display_goto_xy(3, 7);
-     switch(bits){
-       case 0:
-         display_string("BLACK"); break;
-       case 1:
-         display_string("BLUE"); break;
-       case 2:
-         display_string("GREEN"); break;
-       case 3:
-         display_string("CYAN"); break;
-       case 4:
-         display_string("RED");break;
-       case 5:
-         display_string("MAGENTA");break;
-       case 6: break;
-         display_string("YELLOW");
-       case 7:
-         display_string("WHITE");break;
-     }
-     display_update();
-   }
- }
 
 
 /*
