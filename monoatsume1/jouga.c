@@ -155,6 +155,8 @@ calibration_func(void)
 
 void dispTouch_func(void){
   // Touch sensor display
+  u8 flag = ecrobot_get_touch_sensor(U8 port_id);
+
 }
 
 
@@ -168,6 +170,7 @@ void dispColor_func(void){
   u8 bits = 0;
 
   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
+  display_clear(0);
   for(;;){
     // Read Color value
     dly_tsk(100);
