@@ -31,7 +31,7 @@ enum Color
   Pink,
   Red,
   LightBlue,
-  LightGreen,
+  Green,
   Yellow,
   Black,
   White,
@@ -81,17 +81,21 @@ int get_light_sensor(int Sensor)
   }
 }
 
-int CalcRGBPosition (const int rgb) {
+int CalcRGBPosition(const int rgb)
+{
   // rgbの値を3つの領域に分けるためのパーティションパラメータ
-  int partitionMin = (int) 255 / 3;
+  int partitionMin = (int)255 / 3;
   int partitionMax = partitionMin * 2;
-  if (rgb < partitionMin) {
+  if (rgb < partitionMin)
+  {
     return 0;
   }
-  else if (rgb < partitionMax) {
+  else if (rgb < partitionMax)
+  {
     return 1;
   }
-  else {
+  else
+  {
     return 2;
   }
 }
@@ -108,44 +112,44 @@ enum Color get_color_sensor()
   int greenPosition = CalcRGBPosition(rgb[1]);
   int bluePosition = CalcRGBPosition(rgb[2]);
 
-  // Blue(0, 0, 255), LightBlue(0, 255, 255), Pink(255, 0, 255), Red(255, 0, 0), LightGreen(0, 255, 0), Green(0, 128, 0), Yellow(255, 255, 0), Black(0, 0, 0), 
+  // Blue(0, 0, 255), LightBlue(0, 255, 255), Pink(255, 0, 255), Red(255, 0, 0), LightGreen(0, 255, 0), Green(0, 128, 0), Yellow(255, 255, 0), Black(0, 0, 0),
   // White(255, 255, 255)
- 
-  switch (redPosition * 100 + greenPosition * 10 + bluePosition) {
-    case 000:
-      return Black;
-    case 100:
-    case 200:
-      return Red;
-    case 10:
-    case 11: 
-    case 20:
-    case 21:
-    case 120:
-      return Green;
-    case 001:
-    case 002:
-      return Blue;
-    case 22:
-    case 12:
-      return LightBlue;
-    case 201:
-    case 202:
-    case 212:
-    case 101:
-    case 102:
-      return Pink;
-    case 220:
-    case 221:
-    case 210:
-      return Yellow;
-    case 111:
-    case 222: 
-      return White;
-    default :
-      return UnkonwnColor;
-  }
 
+  switch (redPosition * 100 + greenPosition * 10 + bluePosition)
+  {
+  case 000:
+    return Black;
+  case 100:
+  case 200:
+    return Red;
+  case 10:
+  case 11:
+  case 20:
+  case 21:
+  case 120:
+    return Green;
+  case 001:
+  case 002:
+    return Blue;
+  case 22:
+  case 12:
+    return LightBlue;
+  case 201:
+  case 202:
+  case 212:
+  case 101:
+  case 102:
+    return Pink;
+  case 220:
+  case 221:
+  case 210:
+    return Yellow;
+  case 111:
+  case 222:
+    return White;
+  default:
+    return UnkonwnColor;
+  }
 }
 
 // 超音波センサーからrange[cm]に物体があるかどうか
@@ -246,25 +250,24 @@ void calibration_func(void)
     {
       if (rgbVal[i] < rgbMin[i])
       {
-        rgbMin[i] = rebVal[i];
+        rgbMin[i] = rgbVal[i];
       }
       if (rgbVal[i] > rgbMax[i])
       {
-        rgbMax[i] = rebVal[i];
+        rgbMax[i] = rgbVal[i];
       }
     }
     display_goto_xy(0, 1);
-    display_string("rgb:");
     display_int(rgbVal[0], 4);
     display_int(rgbVal[1], 4);
     display_int(rgbVal[2], 4);
 
     display_goto_xy(0, 3);
-    display_string("min: ");
+    display_string("min:");
     display_int(rgbMin[0], 4);
     display_int(rgbMin[1], 4);
     display_int(rgbMin[2], 4);
-    display_string("max: ");
+    display_string("max:");
     display_int(rgbMax[0], 4);
     display_int(rgbMax[1], 4);
     display_int(rgbMax[2], 4);
