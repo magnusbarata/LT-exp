@@ -159,8 +159,8 @@ void dispTouch_func(void){
   display_clear(0);
 
   for(;;){
-      u8 flag1 = ecrobot_get_touch_sensor(Touch1);  //if 1 = on, 0 = off
-      u8 flag2 = ecrobot_get_touch_sensor(Touch2);  //if 1 = on, 0 = off
+      U8 flag1 = ecrobot_get_touch_sensor(Touch1);  //if 1 = on, 0 = off
+      U8 flag2 = ecrobot_get_touch_sensor(Touch2);  //if 1 = on, 0 = off
       display_goto_xy(0,2);
       display_string("Right_touch:")
       display_int(flag1);
