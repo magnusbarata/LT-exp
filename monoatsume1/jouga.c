@@ -246,6 +246,10 @@ void dispSonar_func(void){
  *	ここを直すことで考えているアルゴリズムを実現できる
  */
 
+void jouga_collect(void){
+  jouga_algorithm = algorithm_collect;
+}
+
 void algorithm_collect{
 
 }
