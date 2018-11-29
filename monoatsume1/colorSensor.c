@@ -5,7 +5,7 @@
 /* Color Info
  * R: {598, 296, 223}, G: {381, 481, 263}, B: {355, 324, 360}
  * C: {317, 474, 461}, M: {594, 312, 337}, Y: {641, 570, 350}
- * W: {}, K: {296, 243, 189}
+ * W: {556, 502, 445}, K: {296, 243, 189}
  */
 
  //---------- High-Low ----------//
@@ -80,4 +80,4 @@ else if (green < red && green < blue)
  digitalWrite(redLed, LOW);
  digitalWrite(greenLed, HIGH); // Turn GREEN LED ON
  digitalWrite(blueLed, LOW);
-}  
+}
