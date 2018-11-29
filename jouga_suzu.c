@@ -24,48 +24,25 @@ typedef struct _NameFunc
   MFunc func;
 } NameFunc;
 
-enum Color
-{
-  // 青, ピンク、赤, 水色, 緑、黄色, 黒, 白, None
-  Blue = 0,
-  Pink,
-  Red,
-  LightBlue,
-  Green,
-  Yellow,
-  Black,
-  White,
-  UnkonwnColor,
-  ColorNum,
-};
-const int colorNum = ColorNum;
-
-typedef struct _ColorInfo
-{
-  enum Color color;
-  // cmax, cminをRGBまで細分化したもの
-  int maxRGB[3];
-  int minRGB[3];
-} ColorInfo;
-
 void calibration_func(void);
-void jouga_collect(void);
-void algorithm_collect(void);
+void dispColor_func(void);
+void dispTouch_func(void);
 
 /* 外部変数の定義 */
 char name[17];
+int lval, cval;
 int llow = LOWVAL, lhigh = HIGHVAL;
 int clow = LOWVAL, chigh = HIGHVAL;
-int lval, cval;
-void (*jouga_algorithm)(void) = algorithm_collect; // デフォルトの設定
+//void (*jouga_algorithm)(void) = algorithm_light;	// デフォルトの設定
 
 NameFunc MainMenu[] = {
     {"Main Menu", NULL},
     {"Calibration", calibration_func}, // センサーのキャリブレーション
-    {"Collect", jouga_collect},        // 物集めアルゴリズム
-    {"Start", NULL},                   // ライントレースの開始
-    {"Exit", ecrobot_restart_NXT},     // OSの制御に戻る
-                                       //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
+    {"Display Color", dispColor_func},
+    {"Display Touch", dispTouch_func},
+    {"Start", NULL},               // ライントレースの開始
+    {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
+    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
 
 /* ライトセンサーやカラーセンサーの値を0-1023で読み込む(小さいほど暗い) */
@@ -81,91 +58,6 @@ int get_light_sensor(int Sensor)
   }
 }
 
-int CalcRGBPosition(const int rgb)
-{
-  // rgbの値を3つの領域に分けるためのパーティションパラメータ
-  int partitionMin = (int)255 / 3;
-  int partitionMax = partitionMin * 2;
-  if (rgb < partitionMin)
-  {
-    return 0;
-  }
-  else if (rgb < partitionMax)
-  {
-    return 1;
-  }
-  else
-  {
-    return 2;
-  }
-}
-
-enum Color get_color_sensor()
-{
-  // Red, Green, Blue
-  int rgb[3] = {};
-
-  // RGBの生データを取得する
-  ecrobot_get_nxtcolorsensor_rgb(Color, rgb);
-
-  int redPosition = CalcRGBPosition(rgb[0]);
-  int greenPosition = CalcRGBPosition(rgb[1]);
-  int bluePosition = CalcRGBPosition(rgb[2]);
-
-  // Blue(0, 0, 255), LightBlue(0, 255, 255), Pink(255, 0, 255), Red(255, 0, 0), LightGreen(0, 255, 0), Green(0, 128, 0), Yellow(255, 255, 0), Black(0, 0, 0),
-  // White(255, 255, 255)
-
-  switch (redPosition * 100 + greenPosition * 10 + bluePosition)
-  {
-  case 000:
-    return Black;
-  case 100:
-  case 200:
-    return Red;
-  case 10:
-  case 11:
-  case 20:
-  case 21:
-  case 120:
-    return Green;
-  case 001:
-  case 002:
-    return Blue;
-  case 22:
-  case 12:
-    return LightBlue;
-  case 201:
-  case 202:
-  case 212:
-  case 101:
-  case 102:
-    return Pink;
-  case 220:
-  case 221:
-  case 210:
-    return Yellow;
-  case 111:
-  case 222:
-    return White;
-  default:
-    return UnkonwnColor;
-  }
-}
-
-// 超音波センサーからrange[cm]に物体があるかどうか
-int IsInRange(int range)
-{
-  int distance = ecrobot_get_sonar_sensor(Touch);
-  // エラーを除外(-1が返される時は超音波の初期化ミス)
-  if (distance == -1)
-  {
-    return -1;
-  }
-  else
-  {
-    return (distance < range);
-  }
-}
 /* メニューを表示して選択されるのを待つ */
 void func_menu(NameFunc *tbl, int cnt)
 {
@@ -214,6 +106,7 @@ void func_menu(NameFunc *tbl, int cnt)
     break;
   }
 }
+
 /* 白と黒のセンサーの読み取り値を校正 */
 void calibration_func(void)
 {
@@ -274,15 +167,94 @@ void calibration_func(void)
   chigh = cmax;
 }
 
-/*
- * アルゴリズム選択関数群
- *	ライントレースに使うアルゴリズムを選択する
- *	メニュー実現用として利用
- */
-
-void jouga_collect(void)
+void dispTouch_func(void)
 {
-  jouga_algorithm = algorithm_collect;
+  // Touch sensor display
+  nxtButton btn;
+  display_clear(0);
+
+  for (;;)
+  {
+    U8 flag1 = ecrobot_get_touch_sensor(Touch1); //if 1 = on, 0 = off
+    U8 flag2 = ecrobot_get_touch_sensor(Touch2); //if 1 = on, 0 = off
+    display_goto_xy(0, 2);
+    display_string("Right_touch:"); // S1
+    display_int(flag1, 4);
+    display_goto_xy(0, 4);
+    display_string("Left_touch:"); // S2
+    display_int(flag2, 4);
+    display_update();
+    switch (btn)
+    {
+    case Cbtn:
+      break;
+    default:
+      continue;
+    }
+    break;
+  }
+}
+
+U8 bin(const int val, const int div, const int n)
+{
+  if (val > div)
+    return 1 << n;
+  return 0 << n;
+}
+
+void dispColor_func(void)
+{
+  S16 col[3];
+  U8 bits = 0;
+
+  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
+  display_clear(0);
+  for (;;)
+  {
+    // Read Color value
+    dly_tsk(100);
+    ecrobot_get_nxtcolorsensor_rgb(Color, col);
+    bits = bin(col[0], 400, 2) |
+           bin(col[1], 350, 1) |
+           bin(col[2], 320, 0);
+
+    // Yellow 641. 570, 350
+
+    // Display Color
+    display_goto_xy(2, 2);
+    display_int(col[0], 4);
+    display_int(col[1], 4);
+    display_int(col[2], 4);
+    display_goto_xy(3, 7);
+    switch (bits)
+    {
+    case 0:
+      display_string("BLACK");
+      break;
+    case 1:
+      display_string("BLUE");
+      break;
+    case 2:
+      display_string("GREEN");
+      break;
+    case 3:
+      display_string("CYAN");
+      break;
+    case 4:
+      display_string("RED");
+      break;
+    case 5:
+      display_string("MAGENTA");
+      break;
+    case 6:
+      display_string("YELLOW");
+      break;
+    case 7:
+      display_string("WHITE");
+      break;
+    }
+    display_update();
+  }
 }
 
 /*
@@ -291,49 +263,6 @@ void jouga_collect(void)
  *	周期タイマがセマフォを操作することで定期的に起動される
  *	ここを直すことで考えているアルゴリズムを実現できる
  */
-
-void algorithm_collect()
-{
-  // 左右のモーターの回転数
-  int RmotorCount = 0;
-  int LmotorCount = 0;
-  enum Color sensorColor;
-
-  /*---------------発進動作-----------------------*/
-  motor_set_speed(Rmotor, 0, 1);
-  motor_set_speed(Lmotor, 0, 1);
-  // 左右のモーターの累計回転数を0にリセット
-  nxt_motor_set_count(Rmotor, 0);
-  nxt_motor_set_count(Lmotor, 0);
-
-  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
-  for (;;)
-  {
-    wai_sem(Stskc); // セマフォを待つことで定期的な実行を実現
-
-    /*-------------------------データ取得ルーチン-----------------------*/
-    // 光と色センサーで値取得
-
-    // タイヤの回転数をどんどん計測していく. (nxt_motor_get_countは360度ごとに0にリセットされない)
-    RmotorCount = (int)nxt_motor_get_count(Rmotor) / 360;
-    LmotorCount = (int)nxt_motor_get_count(Lmotor) / 360;
-    // センサーカラーを取得
-    sensorColor = get_color_sensor();
-
-    /*---------------------------------------------------------*/
-
-    /*---------------DisplayState--------------*/
-
-    /*Rモーター, Lモーターの回転角*/
-    display_goto_xy(0, 4);
-    display_int(sensorColor, 4);
-    display_goto_xy(0, 5);
-    display_string("SonarSensor : ");
-    display_int(ecrobot_get_sonar_sensor(Touch, 4));
-    display_update(); //
-    /*----------------------------------------------*/
-  }
-}
 
 /*
  * TASK: InitTsk
@@ -392,7 +321,7 @@ void MoveTsk(VP_INT exinf)
 {
   sta_cyc(Cmove); // 定期的にセマフォを上げるタイマ
 
-  (*jouga_algorithm)(); // 実際の処理
+  //(*jouga_algorithm)();	// 実際の処理
 }
 
 /*
@@ -403,10 +332,10 @@ void MoveTsk(VP_INT exinf)
 void MuscTsk(VP_INT exinf)
 {
   // 延々と大学歌を奏で続ける
-  // for (;;)
-  // {
-  //   play_notes(TIMING_chiba_univ, 8, chiba_univ);
-  // }
+  for (;;)
+  {
+    play_notes(TIMING_chiba_univ, 8, chiba_univ);
+  }
 }
 
 /*
@@ -499,11 +428,9 @@ void jsp_systick_low_priority(void)
 /* システムの初期化ルーチン */
 void ecrobot_device_initialize(void)
 {
-
   nxt_motor_set_speed(Rmotor, 0, 0);
   nxt_motor_set_speed(Lmotor, 0, 0);
   ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
-  ecrobot_init_sonar_sensor(Sonar);
   ecrobot_set_light_sensor_active(Light);
 }
 
@@ -513,6 +440,5 @@ void ecrobot_device_terminate(void)
   nxt_motor_set_speed(Rmotor, 0, 1);
   nxt_motor_set_speed(Lmotor, 0, 1);
   ecrobot_term_nxtcolorsensor(Color);
-  ecrobot_term_sonar_sensor(Touch);
   ecrobot_set_light_sensor_inactive(Light);
 }
