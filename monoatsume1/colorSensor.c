@@ -2,14 +2,13 @@
  * Color Sensing algorithm collection
  */
 
+/* Color Info
+ * R: {598, 296, 223}, G: {381, 481, 263}, B: {355, 324, 360}
+ * C: {317, 474, 461}, M: {594, 312, 337}, Y: {641, 570, 350}
+ * W: {}, K: {296, 243, 189}
+ */
+
  //---------- High-Low ----------//
- void dispTouch_func(void){
-   // Touch sensor display
-   U8 flag = ecrobot_get_touch_sensor(U8 port_id);
-
- }
-
-
  U8 bin(const int val, const int div, const int n){
    if(val > div) return 1 << n;
    return 0 << n;
@@ -45,14 +44,40 @@
        case 3:
          display_string("CYAN"); break;
        case 4:
-         display_string("RED");break;
+         display_string("RED"); break;
        case 5:
-         display_string("MAGENTA");break;
-       case 6: break;
-         display_string("YELLOW");
+         display_string("MAGENTA"); break;
+       case 6:
+         display_string("YELLOW"); break;
        case 7:
-         display_string("WHITE");break;
+         display_string("WHITE"); break;
      }
      display_update();
    }
  }
+
+//---------- High-Mid-Low ----------//
+//---------- Bigger-Smaller ----------//
+if (red < blue && red < green && red < 20)
+{
+ Serial.println(" - (Red Color)");
+ digitalWrite(redLed, HIGH); // Turn RED LED ON
+ digitalWrite(greenLed, LOW);
+ digitalWrite(blueLed, LOW);
+}
+
+else if (blue < red && blue < green)
+{
+ Serial.println(" - (Blue Color)");
+ digitalWrite(redLed, LOW);
+ digitalWrite(greenLed, LOW);
+ digitalWrite(blueLed, HIGH); // Turn BLUE LED ON
+}
+
+else if (green < red && green < blue)
+{
+ Serial.println(" - (Green Color)");
+ digitalWrite(redLed, LOW);
+ digitalWrite(greenLed, HIGH); // Turn GREEN LED ON
+ digitalWrite(blueLed, LOW);
+}  

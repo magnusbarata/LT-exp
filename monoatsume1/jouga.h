@@ -24,9 +24,11 @@ int get_light_sensor(int);
 typedef enum {
 	Rmotor = NXT_PORT_B,
 	Lmotor = NXT_PORT_C,
-  Touch1 = NXT_PORT_S1,
-  Touch2 = NXT_PORT_S2,
-	Light  = NXT_PORT_S3,
+	Amotor = NXT_PORT_D,
+  Rtouch = NXT_PORT_S1,
+  Ltouch = NXT_PORT_S2,
+	//Light  = NXT_PORT_S3,
+	Sonar  = NXT_PORT_S3,
 	Color  = NXT_PORT_S4,
 } DeviceConstants;
 #endif

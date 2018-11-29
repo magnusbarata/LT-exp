@@ -24,21 +24,26 @@ typedef struct _NameFunc {
 } NameFunc;
 
 void calibration_func(void);
+void algorithm_collect(void);
+
+/* Displaying Sensor Output */
 void dispColor_func(void);
 void dispTouch_func(void);
+void dispSonar_func(void);
 
 /* 外部変数の定義 */
 char name[17];
 int lval, cval;
 int llow = LOWVAL, lhigh = HIGHVAL;
 int clow = LOWVAL, chigh = HIGHVAL;
-//void (*jouga_algorithm)(void) = algorithm_light;	// デフォルトの設定
+void (*jouga_algorithm)(void) = algorithm_collect;	// デフォルトの設定
 
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
   {"Calibration", calibration_func},	// センサーのキャリブレーション
   {"Display Color", dispColor_func},
   {"Display Touch", dispTouch_func},
+  {"Display Sonar", dispSonar_func},
   {"Start", NULL},			// ライントレースの開始
   {"Exit", ecrobot_restart_NXT},	// OSの制御に戻る
 //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
@@ -111,13 +116,13 @@ calibration_func(void)
   display_clear(0);
   motor_set_speed(Lmotor, LOWPOWER / 3 + 10, 1);
   motor_set_speed(Rmotor, LOWPOWER / 3 + 10, 1);
-  lmin = lmax = get_light_sensor(Light);
+  //lmin = lmax = get_light_sensor(Light);
   cmin = cmax = get_light_sensor(Color);
 
   // しばらくの間データを取得
   for (i = 0; i < 150; i++) {
     dly_tsk(20);
-    lval = get_light_sensor(Light);
+    //lval = get_light_sensor(Light);
     cval = get_light_sensor(Color);
     if (lval < lmin) lmin = lval;
     if (lval > lmax) lmax = lval;
@@ -153,32 +158,7 @@ calibration_func(void)
   chigh = cmax;
 }
 
-void dispTouch_func(void){
-  // Touch sensor display
-  nxtButton btn;
-  display_clear(0);
-
-  for(;;){
-      U8 flag1 = ecrobot_get_touch_sensor(Touch1);  //if 1 = on, 0 = off
-      U8 flag2 = ecrobot_get_touch_sensor(Touch2);  //if 1 = on, 0 = off
-      display_goto_xy(0,2);
-      display_string("Right_touch:"); // S1
-      display_int(flag1, 4);
-      display_goto_xy(0,4);
-      display_string("Left_touch:"); // S2
-      display_int(flag2, 4);
-      display_update();
-      switch(btn){
-          case Cbtn:
-              break;
-          default:
-              continue;
-      }
-      break;
-  }
-
-}
-
+/* Displaying Sensor Output */
 U8 bin(const int val, const int div, const int n){
   if(val > div) return 1 << n;
   return 0 << n;
@@ -197,8 +177,6 @@ void dispColor_func(void){
     bits = bin(col[0], 400, 2) |
            bin(col[1], 350, 1) |
            bin(col[2], 320, 0);
-
-    // Yellow 641. 570, 350
 
     // Display Color
     display_goto_xy(2, 2);
@@ -228,6 +206,39 @@ void dispColor_func(void){
   }
 }
 
+void dispTouch_func(void){
+  // Touch sensor display
+  nxtButton btn;
+  display_clear(0);
+
+  for(;;){
+      U8 flag1 = ecrobot_get_touch_sensor(Rtouch);  //if 1 = on, 0 = off
+      U8 flag2 = ecrobot_get_touch_sensor(Ltouch);  //if 1 = on, 0 = off
+      display_goto_xy(0,2);
+      display_string("Right_touch:"); // S1
+      display_int(flag1, 4);
+      display_goto_xy(0,4);
+      display_string("Left_touch:"); // S2
+      display_int(flag2, 4);
+      display_update();
+      switch(btn){  // btn = get_btn()?
+          case Cbtn:
+              break;
+          default:
+              continue;
+      }
+      break;
+  }
+}
+
+void dispSonar_func(void){
+  for(;;){
+    display_goto_xy(0,2);
+    display_int(ecrobot_get_sonar_sensor(Sonar),4);
+    display_update();
+  }
+}
+
 /*
  * アルゴリズム実現関数群
  *	実際に機体を動かす
@@ -235,6 +246,9 @@ void dispColor_func(void){
  *	ここを直すことで考えているアルゴリズムを実現できる
  */
 
+void algorithm_collect{
+
+}
 
 /*
  * TASK: InitTsk
@@ -408,8 +422,10 @@ ecrobot_device_initialize(void)
 {
   nxt_motor_set_speed(Rmotor, 0, 0);
   nxt_motor_set_speed(Lmotor, 0, 0);
+  nxt_motor_set_speed(Amotor, 0, 0);
   ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
-  ecrobot_set_light_sensor_active(Light);
+  //ecrobot_set_light_sensor_active(Light);
+  ecrobot_init_sonar_sensor(Sonar);
 }
 
 /* システム停止時に呼ばれるルーチン */
@@ -418,6 +434,8 @@ ecrobot_device_terminate(void)
 {
   nxt_motor_set_speed(Rmotor, 0, 1);
   nxt_motor_set_speed(Lmotor, 0, 1);
+  nxt_motor_set_speed(Amotor, 0, 1);
   ecrobot_term_nxtcolorsensor(Color);
-  ecrobot_set_light_sensor_inactive(Light);
+  //ecrobot_set_light_sensor_inactive(Light);
+  ecrobot_term_sonar_sensor(Sonar);
 }
