@@ -292,6 +292,19 @@ void jouga_collect(void)
 
 void algorithm_collect(void)
 {
+  S16 col[3];
+  for (;;)
+  {
+    wai_sem(Stskc); // セマフォを待つことで定期的な実行を実現
+
+    flag1 = ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
+    flag2 = ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
+    ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
+    ecrobot_get_nxtcolorsensor_rgb(Color, col);
+    bits = bin(col[0], 400, 2) |
+           bin(col[1], 350, 1) |
+           bin(col[2], 320, 0);
+  }
 }
 
 /*
@@ -367,16 +380,14 @@ void DispTsk(VP_INT exinf)
   display_goto_xy(0, 0);
   display_string(name);
   display_string("state"); // 現在のマシンの状態を表示します.
-  display_int(4, 2);
-  display_string("  ");
-  dispaly_int(ecrobot_get_systick_ms, 3);
+  display_int(ecrobot_get_systick_ms, 3);
   /* センサーの読み取り値の表示 */
   display_goto_xy(0, 6);
   display_string("Rt:");
   display_int(flag1, 2);
   display_string(" Lt:");
   display_int(flag2, 2);
-  display_string(" Color:");
+  display_string("C:");
   display_int(bits, 2);
 
   display_update();
