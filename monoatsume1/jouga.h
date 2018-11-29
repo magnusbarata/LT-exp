@@ -22,9 +22,9 @@ int get_light_sensor(int);
 #ifndef _MACRO_ONLY
 // ポートに関する定数値を列挙型として登録
 typedef enum {
-	Rmotor = NXT_PORT_B,
-	Lmotor = NXT_PORT_C,
-	Amotor = NXT_PORT_D,
+	Amotor = NXT_PORT_A,
+	Lmotor = NXT_PORT_B,
+	Rmotor = NXT_PORT_C,
   Rtouch = NXT_PORT_S1,
   Ltouch = NXT_PORT_S2,
 	//Light  = NXT_PORT_S3,

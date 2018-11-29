@@ -41,8 +41,8 @@ void (*jouga_algorithm)(void) = algorithm_collect;	// デフォルトの設定
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
   {"Calibration", calibration_func},	// センサーのキャリブレーション
-  {"Display Color", dispColor_func},
-  {"Display Touch", dispTouch_func},
+  //{"Display Color", dispColor_func},
+  //{"Display Touch", dispTouch_func},
   {"Display Sonar", dispSonar_func},
   {"Start", NULL},			// ライントレースの開始
   {"Exit", ecrobot_restart_NXT},	// OSの制御に戻る
@@ -221,7 +221,7 @@ void dispTouch_func(void){
       display_string("Left_touch:"); // S2
       display_int(flag2, 4);
       display_update();
-      switch(btn){  // btn = get_btn()?
+      switch(btn = get_btn()){
           case Cbtn:
               break;
           default:
@@ -231,7 +231,7 @@ void dispTouch_func(void){
   }
 }
 
-void dispSonar_func(void){
+void dispSonar_func(void){ // NOT TESTED
   for(;;){
     display_goto_xy(0,2);
     display_int(ecrobot_get_sonar_sensor(Sonar),4);
@@ -252,6 +252,20 @@ void jouga_collect(void){
 
 void algorithm_collect{
 
+}
+
+// Event flag update routine
+void ESetTsk(VP_INT exinf)
+{
+	/*for (;;) {
+		dly_tsk(10);
+		if (ecrobot_get_touch_sensor(Rtouch)) {
+			set_flg(Fsens, eRtouch);
+		}
+		if (ecrobot_get_touch_sensor(Ltouch)) {
+			set_flg(Fsens, eLtouch);
+		}
+	}*/
 }
 
 /*
