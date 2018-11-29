@@ -76,6 +76,32 @@ int get_light_sensor(int Sensor)
   }
 }
 
+int Color_func(void)
+{
+  S16 col[3];
+  U8 bits = 0;
+
+  // Read Color value
+  ecrobot_get_nxtcolorsensor_rgb(Color, col);
+  bits = bin(col[0], 400, 2) |
+         bin(col[1], 350, 1) |
+         bin(col[2], 320, 0);
+
+  return bits;
+}
+
+/* Rightタッチセンサー */
+int R_Touch_func(void)
+{
+  return ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
+}
+
+/* Leftタッチセンサー */
+int L_Touch_func(void)
+{
+  return ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
+}
+
 /* メニューを表示して選択されるのを待つ */
 void func_menu(NameFunc *tbl, int cnt)
 {
@@ -192,7 +218,6 @@ U8 bin(const int val, const int div, const int n)
     return 1 << n;
   return 0 << n;
 }
-U8 bits = 0;
 void dispColor_func(void)
 {
   S16 col[3];
@@ -293,13 +318,13 @@ void jouga_collect(void)
 void algorithm_collect(void)
 {
   S16 col[3];
+  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   for (;;)
   {
     wai_sem(Stskc); // セマフォを待つことで定期的な実行を実現
 
     flag1 = ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
     flag2 = ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
-    ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
     bits = bin(col[0], 400, 2) |
            bin(col[1], 350, 1) |
@@ -364,7 +389,7 @@ void MoveTsk(VP_INT exinf)
 {
   sta_cyc(Cmove); // 定期的にセマフォを上げるタイマ
 
-  //(*jouga_algorithm)();	// 実際の処理
+  (*jouga_algorithm)(); // 実際の処理
 }
 
 /*
@@ -384,11 +409,11 @@ void DispTsk(VP_INT exinf)
   /* センサーの読み取り値の表示 */
   display_goto_xy(0, 6);
   display_string("Rt:");
-  display_int(flag1, 2);
+  display_int(R_Touch_func(), 2);
   display_string(" Lt:");
-  display_int(flag2, 2);
+  display_int(L_Touch_func(), 2);
   display_string("C:");
-  display_int(bits, 2);
+  display_int(Color_func(), 2);
 
   display_update();
 }
