@@ -44,7 +44,7 @@ void algorithm_collect(void);
 void dispColor_func(void);
 void dispTouch_func(void);
 void dispSonar_func(void);
-
+void jouga_collect();
 /* 外部変数の定義 */
 char name[17];
 int lval, cval;
@@ -102,6 +102,29 @@ int L_Touch_func(void)
   return ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
 }
 
+// angle = アームを動かす角度, direction = -1, 上げる direction = 1 下げる
+// ちょっとよくわからんから適宜変えないと
+void MoveArm(int angle, int direction)
+{
+  nxt_motor_set_count(Amotor, 0);
+  nxt_motor_set_speed(Amotor, 10 * direction, 0);
+
+  // angle * 2 or angle?
+  // 逆回転だと負の回転数が返ってくるかもしれないので計算
+  while (nxt_motor_get_count(Amotor) * direction <= angle * 2)
+    ;
+  nxt_motor_set_speed(Amotor, 0, 0);
+}
+
+// 受け取った角度をステアリングする
+// 正→右周り, 0→直進, 負→左回り
+void MoveSteer(int steerAngle)
+{
+  nxt_motor_set_count(Lmotor, 0);
+  nxt_motor_set_count(Rmotor, 0);
+
+  while ()
+}
 /* メニューを表示して選択されるのを待つ */
 void func_menu(NameFunc *tbl, int cnt)
 {
@@ -221,7 +244,7 @@ U8 bin(const int val, const int div, const int n)
 void dispColor_func(void)
 {
   S16 col[3];
-
+  U8 bits;
   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   display_clear(0);
   for (;;)
@@ -318,6 +341,7 @@ void jouga_collect(void)
 void algorithm_collect(void)
 {
   S16 col[3];
+  U8 bits;
   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   for (;;)
   {
@@ -445,7 +469,7 @@ void IdleTsk(VP_INT exinf)
   }
 }
 
-void MuskTsk(VP_INT exinf)
+void MuscTsk(VP_INT exinf)
 {
 }
 /*
