@@ -50,7 +50,7 @@ char name[17];
 int lval, cval;
 int llow = LOWVAL, lhigh = HIGHVAL;
 int clow = LOWVAL, chigh = HIGHVAL;
-void (*jouga_algorithm)(void) = algorithm_collect; // デフォルトの設定
+void (*jouga_algorithm)(void) = jouga_collect; // デフォルトの設定
 
 NameFunc MainMenu[] = {
     {"Main Menu", NULL},
@@ -420,6 +420,9 @@ void IdleTsk(VP_INT exinf)
   }
 }
 
+void MuskTsk(VP_INT exinf)
+{
+}
 /*
  * TASK: ColsTsk
  *	Idle時にカラーセンサー用に値を読み込む
@@ -432,7 +435,6 @@ void ColsTsk(VP_INT exinf)
     dly_tsk(2);
   }
 }
-
 /*
  * 周期タイマ
  *	タスクを定期的に起動するだけ
@@ -462,7 +464,6 @@ void ecrobot_device_initialize(void)
   nxt_motor_set_speed(Rmotor, 0, 0);
   nxt_motor_set_speed(Lmotor, 0, 0);
   nxt_motor_set_speed(Amotor, 0, 0);
-  systick_wait_ms(0); // タイマーの初期化
   ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
   //ecrobot_set_light_sensor_active(Light);
   ecrobot_init_sonar_sensor(Sonar);
