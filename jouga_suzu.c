@@ -116,15 +116,62 @@ void MoveArm(int angle, int direction)
   nxt_motor_set_speed(Amotor, 0, 0);
 }
 
-// 受け取った角度をステアリングする
-// 正→右周り, 0→直進, 負→左回り
-void MoveSteer(int steerAngle)
+int spd_limit(int val)
 {
+  if (val > 10)
+    return 10;
+  else if (val < -10)
+    return -10;
+  else
+    return val;
+}
+
+// 受け取った角度をステアリングする (正→右周り, 0→直進, 負→左回り)
+// 先生が作ったものとは逆の設定です. Rをマスターとする
+void MoveSteer(int power, int steerAngle)
+{
+  int Rdeg, Ldeg, error, turn;
+  int prev_err, integral = 0, derivative = 0;
+  double kp = 100.0;
+  double ki = 25;
+  double kd = 0;
+
   nxt_motor_set_count(Lmotor, 0);
   nxt_motor_set_count(Rmotor, 0);
 
-  while ()
+  do
+  {
+    Rdeg = nxt_motor_get_count(Rmotor + steerAngle);
+    Ldeg = nxt_motor_get_count(Lmotor);
+    error = Ldeg - Rdeg;
+
+    // PID
+    integral = integral + error;
+    derivative = error - prev_err;
+    turn = kp * error + ki * integral + kd * derivative;
+
+    // Control
+    motor_set_speed(Rmotor, power, 1);                   // Master
+    motor_set_speed(Lmotor, power - spd_limit(turn), 1); // Slave
+    prev_err = error;
+  } while (1);
 }
+
+// 最初にpowerでモーターセットして, length分だけステアリング動作をPI制御するラッパー関数
+void Move_length(int power, int steer, int length)
+{
+  motor_set_speed(Rmotor, power, 1);
+  motor_set_speed(Lfmotor, power, 1);
+  int i = 0;
+  do
+  {
+    i++;
+    MoveSteer(power, steer);
+  } while (i < length);
+  motor_set_speed(Rmotor, 0, 0);
+  motor_set_speed(Lmotor, 0, 0);
+}
+
 /* メニューを表示して選択されるのを待つ */
 void func_menu(NameFunc *tbl, int cnt)
 {
