@@ -141,7 +141,7 @@ void MoveSteer(int power, int steerAngle)
 
   do
   {
-    Rdeg = nxt_motor_get_count(Rmotor + steerAngle);
+    Rdeg = nxt_motor_get_count(Rmotor) + steerAngle;
     Ldeg = nxt_motor_get_count(Lmotor);
     error = Ldeg - Rdeg;
 
@@ -161,7 +161,7 @@ void MoveSteer(int power, int steerAngle)
 void Move_length(int power, int steer, int length)
 {
   motor_set_speed(Rmotor, power, 1);
-  motor_set_speed(Lfmotor, power, 1);
+  motor_set_speed(Lmotor, power, 1);
   int i = 0;
   do
   {
