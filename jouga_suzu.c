@@ -44,7 +44,7 @@ void algorithm_collect(void);
 void dispColor_func(void);
 void dispTouch_func(void);
 void dispSonar_func(void);
-
+void jouga_collect();
 /* 外部変数の定義 */
 char name[17];
 int lval, cval;
@@ -100,6 +100,76 @@ int R_Touch_func(void)
 int L_Touch_func(void)
 {
   return ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
+}
+
+// angle = アームを動かす角度, direction = -1, 上げる direction = 1 下げる
+// ちょっとよくわからんから適宜変えないと
+void MoveArm(int angle, int direction)
+{
+  nxt_motor_set_count(Amotor, 0);
+  nxt_motor_set_speed(Amotor, 10 * direction, 0);
+
+  // angle * 2 or angle?
+  // 逆回転だと負の回転数が返ってくるかもしれないので計算
+  while (nxt_motor_get_count(Amotor) * direction <= angle * 2)
+    ;
+  nxt_motor_set_speed(Amotor, 0, 0);
+}
+
+int spd_limit(int val)
+{
+  if (val > 10)
+    return 10;
+  else if (val < -10)
+    return -10;
+  else
+    return val;
+}
+
+// 受け取った角度をステアリングする (正→右周り, 0→直進, 負→左回り)
+// 先生が作ったものとは逆の設定です. Rをマスターとする
+void MoveSteer(int power, int steerAngle)
+{
+  int Rdeg, Ldeg, error, turn;
+  int prev_err, integral = 0, derivative = 0;
+  double kp = 100.0;
+  double ki = 25;
+  double kd = 0;
+
+  nxt_motor_set_count(Lmotor, 0);
+  nxt_motor_set_count(Rmotor, 0);
+
+  do
+  {
+    Rdeg = nxt_motor_get_count(Rmotor + steerAngle);
+    Ldeg = nxt_motor_get_count(Lmotor);
+    error = Ldeg - Rdeg;
+
+    // PID
+    integral = integral + error;
+    derivative = error - prev_err;
+    turn = kp * error + ki * integral + kd * derivative;
+
+    // Control
+    motor_set_speed(Rmotor, power, 1);                   // Master
+    motor_set_speed(Lmotor, power - spd_limit(turn), 1); // Slave
+    prev_err = error;
+  } while (1);
+}
+
+// 最初にpowerでモーターセットして, length分だけステアリング動作をPI制御するラッパー関数
+void Move_length(int power, int steer, int length)
+{
+  motor_set_speed(Rmotor, power, 1);
+  motor_set_speed(Lfmotor, power, 1);
+  int i = 0;
+  do
+  {
+    i++;
+    MoveSteer(power, steer);
+  } while (i < length);
+  motor_set_speed(Rmotor, 0, 0);
+  motor_set_speed(Lmotor, 0, 0);
 }
 
 /* メニューを表示して選択されるのを待つ */
@@ -221,7 +291,7 @@ U8 bin(const int val, const int div, const int n)
 void dispColor_func(void)
 {
   S16 col[3];
-
+  U8 bits;
   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   display_clear(0);
   for (;;)
@@ -318,6 +388,7 @@ void jouga_collect(void)
 void algorithm_collect(void)
 {
   S16 col[3];
+  U8 bits;
   ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
   for (;;)
   {
@@ -445,7 +516,7 @@ void IdleTsk(VP_INT exinf)
   }
 }
 
-void MuskTsk(VP_INT exinf)
+void MuscTsk(VP_INT exinf)
 {
 }
 /*
