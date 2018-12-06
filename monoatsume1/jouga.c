@@ -6,7 +6,7 @@
   TODO:
     MotrTsk(), MoveTsk(), movelength(), calibration(), collect_all()
   EXP:
-    Display, Sound, Motor, Arm, Collect All
+    Sound, Motor, Arm, Collect All
 */
 #include "display.h"	// 変更したバージョンを使うために先頭でinclude
 
@@ -102,6 +102,10 @@ U8 get_btn(void)
   return btn;
 }
 
+void move_func(const int POW, const int RATIO, const int TIME){
+
+}
+
 /*----------- メニュー -----------*/
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
@@ -152,6 +156,7 @@ void func_menu(NameFunc *tbl, int cnt)
     }
     break;
   }
+  act_tsk(Tmain);
 }
 
 void calibrate(void) {algorithm = calibration;}
@@ -206,18 +211,24 @@ void SensTsk(VP_INT exinf)
     // タッチセンサー
 		if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
-      clr_flg(Fsens, RTR);
 		} else {
-      set_flg(Fsens, RTR);
-      clr_flg(Fsens, RTP);
+      clr_flg(Fsens, ~RTP);
     }
-
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
-      clr_flg(Fsens, LTR);
 		} else {
-      set_flg(Fsens, LTR);
-      clr_flg(Fsens, LTP);
+      clr_flg(Fsens, ~LTP);
+    }
+
+    if (!RTP) {
+			set_flg(Fsens, RTR);
+		} else {
+      clr_flg(Fsens, ~RTR);
+    }
+		if (!LTP) {
+			set_flg(Fsens, LTR);
+		} else {
+      clr_flg(Fsens, ~LTR);
     }
 	}
 }
@@ -241,36 +252,43 @@ void NbtnTsk(VP_INT exinf)
 
 void QuitTsk(VP_INT exinf)
 {
-  FLGPTN BtnSens;
+  //FLGPTN BtnSens;
 
   for (;;) {
     wai_sem(Snbtn);
-    wai_flg(Fnbtn, Cbtn, TWF_ORW, &BtnSens);
+    /*wai_flg(Fnbtn, Cbtn, TWF_ORW, &BtnSens);
     if(Cbtn){
       nxt_motor_set_speed(Rmotor, 0, 0);
       nxt_motor_set_speed(Lmotor, 0, 0);
       nxt_motor_set_speed(Amotor, 0, 1);
-      //stp_cyc(Cmove);
+      stp_cyc(Cmove);
       stp_cyc(Cdisp);
       //ter_tsk(Tmove);
       ter_tsk(Ttimr);
       ter_tsk(Tmusc);
       ter_tsk(Tmain);
       act_tsk(Tinit);
-    }
-    /*check_NXT_buttons();
+      ter_tsk(Tquit);
+    }*/
+    check_NXT_buttons();
     if (ecrobot_is_ENTER_button_pressed()) {
       nxt_motor_set_speed(Rmotor, 0, 0);
       nxt_motor_set_speed(Lmotor, 0, 0);
       nxt_motor_set_speed(Amotor, 0, 1);
-      //stp_cyc(Cmove);
+      stp_cyc(Cmove);
       stp_cyc(Cdisp);
-      //ter_tsk(Tmove);
+      ter_tsk(Tinit);
+      ter_tsk(Tsens);
+      ter_tsk(Tnbtn);
+      ter_tsk(Tmove);
+      ter_tsk(Tmotr);
       ter_tsk(Ttimr);
       ter_tsk(Tmusc);
       ter_tsk(Tmain);
+      ter_tsk(Tdisp);
       act_tsk(Tinit);
-    }*/
+      ter_tsk(Tquit);
+    }
     sig_sem(Snbtn);
     dly_tsk(10);
   }
@@ -312,9 +330,8 @@ void MainTsk(VP_INT exinf)
 
 void MoveTsk(VP_INT exinf)
 {
-  sta_cyc(Cmove);	// 定期的にセマフォを上げるタイマ
-
-  //(*algorithm)();	// 実際の処理
+  sta_cyc(Cmove);
+  //if (RTP)
 }
 
 void MotrTsk(VP_INT exinf)
@@ -357,13 +374,13 @@ void DispTsk(VP_INT exinf)
   display_string(name);
 
   /* Footer */
-  // カラー表示
   display_goto_xy(0, 7);
   wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
                  MAG | YEL | WHT | RTP | LTP |
                  RTR | LTR | POS | DIS, TWF_ORW, &sens);
 
   switch(sens){
+    // カラー表示
     case BLK: display_string("K"); break;
     case BLU: display_string("B"); break;
     case GRN: display_string("G"); break;
@@ -372,11 +389,8 @@ void DispTsk(VP_INT exinf)
     case MAG: display_string("M"); break;
     case YEL: display_string("Y"); break;
     case WHT: display_string("W"); break;
-    //default: display_string(" ");
-  }
 
-  // タッチ表示
-  switch(sens){
+    // タッチ表示
     case LTP:
       display_goto_xy(1, 7); display_string("[");
       break;
@@ -386,21 +400,23 @@ void DispTsk(VP_INT exinf)
     case LTP | RTP:
       display_goto_xy(1, 7); display_string("[]");
       break;
+
+    // モーターとアーム
+    case POS:
+      display_goto_xy(1, 7); display_string("P");
+      break;
+    case DIS:
+      display_goto_xy(2, 7); display_string("D");
+      break;
+    /*case POS | RTP:
+      display_goto_xy(1, 7); display_string("[]");
+      break;*/
+
     default:
-      display_goto_xy(1, 7); display_string("--");
+      display_goto_xy(1, 7); display_string("----");
       break;
   }
 
-  // モーターとアーム
-  display_goto_xy(3, 7); display_string("--");
-  if(sens){
-    display_goto_xy(3, 7);
-    display_string("D");
-  }
-  if(sens){
-    display_goto_xy(4, 7);
-    display_string("P");
-  }
 
   display_update();
 }
