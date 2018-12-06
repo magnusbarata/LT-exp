@@ -57,8 +57,8 @@ typedef enum {
   Cbtn = 1 << 3,
 } Nbtns;
 
-//U8 ecrobot_get_button_state(void);
-//void ecrobot_poll_nxtstate(void);
+U8 ecrobot_get_button_state(void);
+void ecrobot_poll_nxtstate(void);
 
 void calibrate(void);
 void collect_all(void);
@@ -94,7 +94,6 @@ U8 get_btn(void)
     dly_tsk(7);
     ecrobot_poll_nxtstate();
   } while (!(btn = ecrobot_get_button_state()));
-  click_btn(btn);
   while ((t = ecrobot_get_button_state())) {
     btn |= t;
     dly_tsk(7);
@@ -153,8 +152,6 @@ void func_menu(NameFunc *tbl, int cnt)
     }
     break;
   }
-
-  iact_tsk(Tmain);
 }
 
 void calibrate(void) {algorithm = calibration;}
@@ -209,11 +206,19 @@ void SensTsk(VP_INT exinf)
     // タッチセンサー
 		if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
-		} else set_flg(Fsens, RTR);
+      clr_flg(Fsens, RTR);
+		} else {
+      set_flg(Fsens, RTR);
+      clr_flg(Fsens, RTP);
+    }
 
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
-		} else set_flg(Fsens, LTR);
+      clr_flg(Fsens, LTR);
+		} else {
+      set_flg(Fsens, LTR);
+      clr_flg(Fsens, LTP);
+    }
 	}
 }
 
@@ -301,7 +306,7 @@ void MainTsk(VP_INT exinf)
   act_tsk(Ttimr);
   act_tsk(Tmusc);
 
-  (*algorithm)();
+  //(*algorithm)();
   sta_cyc(Cdisp); // Before (*algorithm)()?
 }
 
@@ -350,7 +355,6 @@ void DispTsk(VP_INT exinf)
   /* Header */
   display_goto_xy(0, 0);
   display_string(name);
-  display_string(" abc");
 
   /* Footer */
   // カラー表示
@@ -368,27 +372,32 @@ void DispTsk(VP_INT exinf)
     case MAG: display_string("M"); break;
     case YEL: display_string("Y"); break;
     case WHT: display_string("W"); break;
-    default: display_string(" ");
+    //default: display_string(" ");
   }
 
   // タッチ表示
-  display_goto_xy(1, 7); display_string("--");
-  if(RTP){
-    display_goto_xy(1, 7);
-    display_string("[");
-  }
-  if(LTP){
-    display_goto_xy(2, 7);
-    display_string("]");
+  switch(sens){
+    case LTP:
+      display_goto_xy(1, 7); display_string("[");
+      break;
+    case RTP:
+      display_goto_xy(2, 7); display_string("]");
+      break;
+    case LTP | RTP:
+      display_goto_xy(1, 7); display_string("[]");
+      break;
+    default:
+      display_goto_xy(1, 7); display_string("--");
+      break;
   }
 
   // モーターとアーム
   display_goto_xy(3, 7); display_string("--");
-  if(DIS){
+  if(sens){
     display_goto_xy(3, 7);
     display_string("D");
   }
-  if(POS){
+  if(sens){
     display_goto_xy(4, 7);
     display_string("P");
   }
