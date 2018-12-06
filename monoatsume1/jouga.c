@@ -169,7 +169,7 @@ void calibration(void)
 void collect_all(void) {algorithm = alg_collect_all;}
 void alg_collect_all(void)
 {
-  // TODO
+  arm_func(30, 10);
   //if () set_flg(Fsens, DIS);
 }
 
@@ -334,14 +334,32 @@ void MoveTsk(VP_INT exinf)
   //if (RTP)
 }
 
+void arm_func(const int deg, const int pow){
+  clr_flg(Fsens, ~POS);
+  Adeg = deg;
+  Apow = pow;
+}
+
 void MotrTsk(VP_INT exinf)
 {
   FLGPTN ArmSens;
 
-  nxt_motor_set_count(Amotor, 0);
-  clr_flg(Fsens, ~POS);
+  //nxt_motor_set_count(Amotor, 0);
+  //clr_flg(Fsens, ~POS);
   // 無限ループ?
-  do{
+  for(;;){
+    wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
+    if(POS) motor_set_speed(Amotor, 0, 1);
+    else motor_set_speed(Amotor, Apow, 1);
+    if(nxt_motor_get_count() == Adeg)
+      set_flg(Fsens, POS);
+
+    // アーム角度表示
+    display_goto_xy(1, 3);
+    display_string("Arm Degree:");
+    display_int(nxt_motor_get_count);
+  }
+  /*do{
     wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
     motor_set_speed(Amotor, Apow, 1);
     if (nxt_motor_get_count(Amotor) == Adeg){
@@ -349,7 +367,7 @@ void MotrTsk(VP_INT exinf)
       motor_set_speed(Amotor, 0, 1);
       set_flg(Fsens, POS);
     }
-  } while(!POS);
+  } while(!POS);*/
 }
 
 void TimrTsk(VP_INT exinf)
