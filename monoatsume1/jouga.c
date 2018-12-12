@@ -4,9 +4,9 @@
 
 /*
   TODO:
-    MotrTsk(), MoveTsk(), movelength(), calibration(), collect_all()
+    calibration(), collect_all()
   EXP:
-    Sound, Motor, Arm, Collect All
+    Motor, Arm, Display, Sound, Collect All
 */
 #include "display.h"	// 変更したバージョンを使うために先頭でinclude
 
@@ -102,7 +102,7 @@ U8 bin(const int val, const int div, const int n)
   return 0 << n;
 }
 
-int spd_limit(int val){
+int spd_limit(const int val){
   if(val > 20) return 20;
   else if(val < -20) return -20;
   else return val;
@@ -110,47 +110,38 @@ int spd_limit(int val){
 
 void mov_func(const int POW, int RATIO, const int DEG)
 {
-  int mMotr, sMotr;
-  int mMotrdeg, sMotrdeg, turn;
+  //正：右，負：左
+  int Ldeg, Rdeg, turn;
   int cur_err, prev_err, integral, derivative;
   double kp = 100.0;
   double ki = 25;
-  double kd = 0.5;
+  double kd = 0;
 
   nxt_motor_set_count(Lmotor, 0);
   nxt_motor_set_count(Rmotor, 0);
   prev_err = integral = derivative = 0;
 
-  // 直進，右曲がり，左曲がりの選択
-  if(RATIO > 0){
-    mMotr = Rmotor;
-    sMotr = Lmotor;
-  } else {
-    RATIO *= -1;
-    mMotr = Lmotor;
-    sMotr = Rmotor;
-  }
-
   do{
     wai_sem(Stskc);
 
     // PID制御
-    mMotrdeg = nxt_motor_get_count(mMotr);
-    sMotrdeg = nxt_motor_get_count(sMotr);
-    error = mMotrdeg - sMotrdeg;  // 角度の差
-    integral = integral + error;
+    Ldeg = nxt_motor_get_count(Lmotor);
+    Rdeg = nxt_motor_get_count(Rmotor);
+    cur_err = Ldeg - Rdeg　- RATIO;  // 角度の差 OR角度の比率(?)
+    //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
+    integral = integral + cur_err;
     derivative = cur_err - prev_err;
     turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(MainMotr, POW, 1);
-    motor_set_speed(SubMotr, POW - spd_limit(turn+RATIO), 1);
+    motor_set_speed(Lmotor, POW, 1); // -spd_limit(turn)?
+    motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
     prev_err = cur_err;
 
     // モーター角度表示
     display_goto_xy(1, 2);
-    display_string("mMotr:"); display_int(mMotrdeg, 4);
+    display_string("Lmotor:"); display_int(Ldeg, 4);
     display_goto_xy(1, 3);
-    display_string("sMotr:"); display_int(sMotrdeg, 4);
-  } while(mMotrdeg != DEG);
+    display_string("Rmotor:"); display_int(Rdeg, 4);
+  } while(Ldeg != DEG);
   set_flg(Fsens, DIS);
 }
 
@@ -233,8 +224,8 @@ void calibration(void)
   arm_func(10, -30); // アームを上げる
   arm_func(10, 30); // アームを下げる
   mov_func(30, 0, 3600); // 直進
-  mov_func(30, 20, 720); //
-  mov_func(30, -20, 720); //
+  mov_func(30, 20, 720); //　右曲がり
+  mov_func(30, -20, 720); // 左曲がり
 }
 
 /*----------- アルゴリズム群 -----------*/
@@ -267,7 +258,7 @@ void SensTsk(VP_INT exinf)
             bin(col[2], COL_THRES[2], 0);
     // フラッグをクリアしてからセットする
     //clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
-    //                 RED | MAG | YEL | WHT));
+    //                 RED | MAG | YEL | WHT)); (?)
     switch(CBits){
       case 0: set_flg(Fsens, BLK); break;
       case 1: set_flg(Fsens, BLU); break;
