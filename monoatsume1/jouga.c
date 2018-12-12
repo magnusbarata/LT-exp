@@ -62,14 +62,14 @@ void ecrobot_poll_nxtstate(void);
 
 void calibrate(void);
 void collect_all(void);
+void collect_red_ball(void);
 void calibration(void);
 void alg_collect_all(void);
+void alg_collect_red_ball(void);
 
 /* 外部変数の定義 */
 char name[17];
-void (*algorithm)(void) = alg_collect_all;
-int Adeg = 0; // アームモーターの目的角度
-int Apow = 0; // アームの上下パワー
+void (*algorithm)(void) = calibrate;
 
 /*----------- 雑多な関数群 -----------*/
 void wait_for_release(void)
@@ -78,12 +78,6 @@ void wait_for_release(void)
     dly_tsk(7);
     ecrobot_poll_nxtstate();
   }
-}
-
-U8 bin(const int val, const int div, const int n)
-{
-  if(val > div) return 1 << n;
-  return 0 << n;
 }
 
 U8 get_btn(void)
@@ -102,8 +96,79 @@ U8 get_btn(void)
   return btn;
 }
 
-void move_func(const int POW, const int RATIO, const int TIME){
+U8 bin(const int val, const int div, const int n)
+{
+  if(val > div) return 1 << n;
+  return 0 << n;
+}
 
+int spd_limit(int val){
+  if(val > 20) return 20;
+  else if(val < -20) return -20;
+  else return val;
+}
+
+void mov_func(const int POW, int RATIO, const int DEG)
+{
+  int mMotr, sMotr;
+  int mMotrdeg, sMotrdeg, turn;
+  int cur_err, prev_err, integral, derivative;
+  double kp = 100.0;
+  double ki = 25;
+  double kd = 0.5;
+
+  nxt_motor_set_count(Lmotor, 0);
+  nxt_motor_set_count(Rmotor, 0);
+  prev_err = integral = derivative = 0;
+
+  // 直進，右曲がり，左曲がりの選択
+  if(RATIO > 0){
+    mMotr = Rmotor;
+    sMotr = Lmotor;
+  } else {
+    RATIO *= -1;
+    mMotr = Lmotor;
+    sMotr = Rmotor;
+  }
+
+  do{
+    wai_sem(Stskc);
+
+    // PID制御
+    mMotrdeg = nxt_motor_get_count(mMotr);
+    sMotrdeg = nxt_motor_get_count(sMotr);
+    error = mMotrdeg - sMotrdeg;  // 角度の差
+    integral = integral + error;
+    derivative = cur_err - prev_err;
+    turn = kp * cur_err + ki * integral + kd * derivative;
+    motor_set_speed(MainMotr, POW, 1);
+    motor_set_speed(SubMotr, POW - spd_limit(turn+RATIO), 1);
+    prev_err = cur_err;
+
+    // モーター角度表示
+    display_goto_xy(1, 2);
+    display_string("mMotr:"); display_int(mMotrdeg, 4);
+    display_goto_xy(1, 3);
+    display_string("sMotr:"); display_int(sMotrdeg, 4);
+  } while(mMotrdeg != DEG);
+  set_flg(Fsens, DIS);
+}
+
+void arm_func(const int POW, const int DEG)
+{
+  // TODO: 上げ下げのオプション
+  // 正：下，負：上
+  nxt_motor_set_count(Amotor, 0);
+  while(nxt_motor_get_count(Amotor) != DEG){ // <= OR >= (?)
+    wai_sem(Stskc);
+    motor_set_speed(Amotor, POW, 1);
+
+    // アーム角度表示
+    display_goto_xy(1, 1);
+    display_string("Arm:");
+    display_int(nxt_motor_get_count(Amotor), 4);
+  }
+  set_flg(Fsens, POS);
 }
 
 /*----------- メニュー -----------*/
@@ -112,6 +177,7 @@ NameFunc MainMenu[] = {
   {"Start", NULL},
   {"Calibration", calibrate},
   {"Collect All", collect_all},
+  {"Collect Red Ball", collect_red_ball},
   {"Exit", ecrobot_restart_NXT},	// OSの制御に戻る
 //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -162,18 +228,23 @@ void func_menu(NameFunc *tbl, int cnt)
 void calibrate(void) {algorithm = calibration;}
 void calibration(void)
 {
-  iact_tsk(Tmotr);
+  act_tsk(Tmotr);
+  // TO TEST
+  arm_func(10, -30); // アームを上げる
+  arm_func(10, 30); // アームを下げる
+  mov_func(30, 0, 3600); // 直進
+  mov_func(30, 20, 720); //
+  mov_func(30, -20, 720); //
 }
 
 /*----------- アルゴリズム群 -----------*/
 void collect_all(void) {algorithm = alg_collect_all;}
 void alg_collect_all(void)
 {
-  arm_func(30, 10);
-  //if () set_flg(Fsens, DIS);
+  //arm_func(10, 30);
 }
 
-void collect_red_ball(void) {algorithm = alg_collect_all;}
+void collect_red_ball(void) {algorithm = alg_collect_red_ball;}
 void alg_collect_red_ball(void)
 {
 
@@ -187,7 +258,7 @@ void SensTsk(VP_INT exinf)
   U8 CBits = 0;
 
 	for (;;) {
-		dly_tsk(5);
+		wai_sem(Stskc);
 
     // カラーセンサー
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
@@ -195,8 +266,8 @@ void SensTsk(VP_INT exinf)
             bin(col[1], COL_THRES[1], 1) |
             bin(col[2], COL_THRES[2], 0);
     // フラッグをクリアしてからセットする
-    clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
-                     RED | MAG | YEL | WHT));
+    //clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
+    //                 RED | MAG | YEL | WHT));
     switch(CBits){
       case 0: set_flg(Fsens, BLK); break;
       case 1: set_flg(Fsens, BLU); break;
@@ -212,25 +283,16 @@ void SensTsk(VP_INT exinf)
 		if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
 		} else {
-      clr_flg(Fsens, ~RTP);
+      set_flg(Fsens, RTR);
     }
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
 		} else {
-      clr_flg(Fsens, ~LTP);
-    }
-
-    if (!RTP) {
-			set_flg(Fsens, RTR);
-		} else {
-      clr_flg(Fsens, ~RTR);
-    }
-		if (!LTP) {
-			set_flg(Fsens, LTR);
-		} else {
-      clr_flg(Fsens, ~LTR);
+      set_flg(Fsens, LTR);
     }
 	}
+
+  sig_sem(Stskc);
 }
 
 void NbtnTsk(VP_INT exinf)
@@ -238,15 +300,17 @@ void NbtnTsk(VP_INT exinf)
   U8 btn;
 
   for (;;){
+    wai_sem(Snbtn);
     btn = ecrobot_get_button_state();
-    dly_tsk(2);
     switch(btn){
       case Obtn: set_flg(Fnbtn, Obtn); break;
       case Lbtn: set_flg(Fnbtn, Lbtn); break;
-      case Rbtn: set_flg(Fnbtn, Rbtn);; break;
+      case Rbtn: set_flg(Fnbtn, Rbtn); break;
       case Cbtn: set_flg(Fnbtn, Cbtn); break;
       default: ecrobot_poll_nxtstate(); break;
     }
+    sig_sem(Snbtn);
+    dly_tsk(10);
   }
 }
 
@@ -255,21 +319,26 @@ void QuitTsk(VP_INT exinf)
   //FLGPTN BtnSens;
 
   for (;;) {
-    wai_sem(Snbtn);
-    /*wai_flg(Fnbtn, Cbtn, TWF_ORW, &BtnSens);
-    if(Cbtn){
+    /*wai_flg(Fnbtn, Obtn, TWF_ORW, &BtnSens);
+    if(BtnSens){ // (BtnSens == Obtn) OR case?
       nxt_motor_set_speed(Rmotor, 0, 0);
       nxt_motor_set_speed(Lmotor, 0, 0);
       nxt_motor_set_speed(Amotor, 0, 1);
       stp_cyc(Cmove);
       stp_cyc(Cdisp);
-      //ter_tsk(Tmove);
+      ter_tsk(Tinit);
+      ter_tsk(Tsens);
+      ter_tsk(Tnbtn);
+      ter_tsk(Tmove);
+      ter_tsk(Tmotr);
       ter_tsk(Ttimr);
       ter_tsk(Tmusc);
       ter_tsk(Tmain);
+      ter_tsk(Tdisp);
       act_tsk(Tinit);
-      ter_tsk(Tquit);
+      clr_flg(Fsens, ~(Obtn | Lbtn | Rbtn | Cbtn));
     }*/
+    wai_sem(Snbtn);
     check_NXT_buttons();
     if (ecrobot_is_ENTER_button_pressed()) {
       nxt_motor_set_speed(Rmotor, 0, 0);
@@ -287,10 +356,10 @@ void QuitTsk(VP_INT exinf)
       ter_tsk(Tmain);
       ter_tsk(Tdisp);
       act_tsk(Tinit);
-      ter_tsk(Tquit);
     }
     sig_sem(Snbtn);
-    dly_tsk(10);
+    dly_tsk(5);
+    ter_tsk(Tquit);
   }
 }
 
@@ -324,50 +393,38 @@ void MainTsk(VP_INT exinf)
   act_tsk(Ttimr);
   act_tsk(Tmusc);
 
-  //(*algorithm)();
-  sta_cyc(Cdisp); // Before (*algorithm)()?
+  sta_cyc(Cmove);
+  sta_cyc(Cdisp);
+  (*algorithm)();
 }
 
 void MoveTsk(VP_INT exinf)
 {
-  sta_cyc(Cmove);
-  //if (RTP)
-}
+  FLGPTN MtrSens;
 
-void arm_func(const int deg, const int pow){
-  clr_flg(Fsens, ~POS);
-  Adeg = deg;
-  Apow = pow;
+  for(;;){
+    wai_flg(Fsens, DIS, TWF_CLR, &MtrSens);
+    if(MtrSens == DIS){
+      motor_set_speed(Lmotor, 0, 1);
+      motor_set_speed(Rmotor, 0, 1)
+    }
+    clr_flg(Fsens, ~DIS);
+  }
 }
 
 void MotrTsk(VP_INT exinf)
 {
-  FLGPTN ArmSens;
+  FLGPTN ArmSens; // twai_flg() OR ref_flg()?
 
-  //nxt_motor_set_count(Amotor, 0);
-  //clr_flg(Fsens, ~POS);
-  // 無限ループ?
   for(;;){
-    wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
-    if(POS) motor_set_speed(Amotor, 0, 1);
-    else motor_set_speed(Amotor, Apow, 1);
-    if(nxt_motor_get_count() == Adeg)
-      set_flg(Fsens, POS);
-
-    // アーム角度表示
-    display_goto_xy(1, 3);
-    display_string("Arm Degree:");
-    display_int(nxt_motor_get_count);
+    wai_flg(Fsens, POS, TWF_CLR, &ArmSens); // TWF_ORW | TWF_CLR
+    if(ArmSens == POS) motor_set_speed(Amotor, 0, 1);
+    //else continue;?
+    /* switch(ArmSens){
+      case POS: motor_set_speed(Amotor, 0, 1); break;
+    } */
+    clr_flg(Fsens, ~POS);
   }
-  /*do{
-    wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
-    motor_set_speed(Amotor, Apow, 1);
-    if (nxt_motor_get_count(Amotor) == Adeg){
-      // Can motor degree be minus?
-      motor_set_speed(Amotor, 0, 1);
-      set_flg(Fsens, POS);
-    }
-  } while(!POS);*/
 }
 
 void TimrTsk(VP_INT exinf)
@@ -383,7 +440,7 @@ void TimrTsk(VP_INT exinf)
 
 void DispTsk(VP_INT exinf)
 {
-  FLGPTN sens;
+  T_RFLG sens;
 
   display_clear(0);
 
@@ -393,9 +450,10 @@ void DispTsk(VP_INT exinf)
 
   /* Footer */
   display_goto_xy(0, 7);
-  wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
-                 MAG | YEL | WHT | RTP | LTP |
-                 RTR | LTR | POS | DIS, TWF_ORW, &sens);
+  ref_flg(Fsens, &sens);
+  //wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
+  //               MAG | YEL | WHT | RTP | LTP |
+  //               RTR | LTR | POS | DIS, TWF_ORW, &sens);
 
   switch(sens){
     // カラー表示
@@ -409,32 +467,28 @@ void DispTsk(VP_INT exinf)
     case WHT: display_string("W"); break;
 
     // タッチ表示
-    case LTP:
+    case LTP & LTR:
       display_goto_xy(1, 7); display_string("[");
       break;
-    case RTP:
+    case RTP & RTR:
       display_goto_xy(2, 7); display_string("]");
       break;
-    case LTP | RTP:
+    case (LTP & LTR) | (RTP & RTR):
       display_goto_xy(1, 7); display_string("[]");
       break;
 
     // モーターとアーム
     case POS:
-      display_goto_xy(1, 7); display_string("P");
+      display_goto_xy(3, 7); display_string("P");
       break;
     case DIS:
-      display_goto_xy(2, 7); display_string("D");
+      display_goto_xy(4, 7); display_string("D");
       break;
-    /*case POS | RTP:
-      display_goto_xy(1, 7); display_string("[]");
-      break;*/
 
     default:
       display_goto_xy(1, 7); display_string("----");
       break;
   }
-
 
   display_update();
 }
@@ -442,24 +496,22 @@ void DispTsk(VP_INT exinf)
 void MuscTsk(VP_INT exinf)
 {
   FLGPTN ColSens;
-  // 延々と大学歌を奏で続ける
+
   for (;;) {
-    wai_flg(Fsens,
-      BLK | BLU | GRN | CYA |
-      RED | MAG | YEL | WHT, TWF_ORW, &ColSens);
+    ref_flg(Fsens, &sens);
 
     // 色ごとに音が変わる(C4からC5まで)
     switch(ColSens){
-      case BLK: ecrobot_sound_tone(262, 100, 60); break;
-      case BLU: ecrobot_sound_tone(294, 100, 60); break;
-      case GRN: ecrobot_sound_tone(330, 100, 60); break;
-      case CYA: ecrobot_sound_tone(349, 100, 60); break;
-      case RED: ecrobot_sound_tone(392, 100, 60); break;
-      case MAG: ecrobot_sound_tone(440, 100, 60); break;
-      case YEL: ecrobot_sound_tone(494, 100, 60); break;
-      case WHT: //ecrobot_sound_tone(523, 100, 60);
-        break;
+      case BLK: ecrobot_sound_tone(262, 100, 70); break;
+      case BLU: ecrobot_sound_tone(294, 100, 70); break;
+      case GRN: ecrobot_sound_tone(330, 100, 70); break;
+      case CYA: ecrobot_sound_tone(349, 100, 70); break;
+      case RED: ecrobot_sound_tone(392, 100, 70); break;
+      case MAG: ecrobot_sound_tone(440, 100, 70); break;
+      case YEL: ecrobot_sound_tone(494, 100, 70); break;
+      case WHT: ecrobot_sound_tone(523, 200, 0); break;
     }
+    //dly_tsk(10);
 
     //play_notes(TIMING_chiba_univ, 8, chiba_univ);
     // TODO: 状態ごとに音変わる ()

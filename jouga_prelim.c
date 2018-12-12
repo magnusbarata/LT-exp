@@ -1,6 +1,6 @@
 /*
  *	TOPPERS/JSPを用いたライントレーサーのサンプルコード
- */ 
+ */
 
 #include "display.h"	// 変更したバージョンを使うために先頭でinclude
 
@@ -155,7 +155,7 @@ void calibration_func(void)
   // データ取得終了
   display_goto_xy(3, 7);
   display_string("Is this OK?");
-  
+
   do {
     btn = get_btn();
     if (btn == Cbtn) return;
