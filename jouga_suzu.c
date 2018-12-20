@@ -359,6 +359,36 @@ void calibration(void)
   Steering(-1, 360 * 2);
   mov_func(-50, 0, 1250);
 
+  // 3個目
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 3);
+  mov_func(-50, 0, 2500);
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, 250);
+  Steering(1, 360 * 4);
+  mov_func(-50, 0, 750);
+
+  // 4個目
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, 750);
+  Steering(1, 360 * 5);
+  mov_func(-50, 0, 1500);
+  // 1歩下がってアーム上げ下げしてボール取得
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(-50, 0, -100);
+  arm_func(20, 30);
+  // 揺らす?
+  mov_func(50, 0, 100);
+  mov_func(-50, 0, 100);
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+
+  // 帰宅
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 3);
+  mov_func-50, 0, 1000);
+
   // ピンクエリアに設置
   //arm_func(30, -60);
   // ちょっと押す
