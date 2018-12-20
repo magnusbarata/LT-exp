@@ -107,7 +107,7 @@ U8 bin(const int val, const int div, const int n)
   if(val > div) return 1 << n;
   return 0 << n;
 }
-
+/*
 int spd_limit(const int val)
 {
   if(val > 20) return 20;
@@ -137,7 +137,7 @@ void mov_func(const int POW, const int RATIO, int DEG)
     // PID制御
     Ldeg = nxt_motor_get_count(Lmotor) % 360;
     Rdeg = nxt_motor_get_count(Rmotor) % 360;
-    cur_err = Ldeg - Rdeg　- RATIO;  // 角度の差 OR角度の比率(?)
+    cur_err = Ldeg - Rdeg - RATIO;  // 角度の差 OR角度の比率(?)
     //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
     integral = integral + cur_err;
     derivative = cur_err - prev_err;
@@ -183,14 +183,13 @@ void arm_func(int POW, const int DEG)
   //set_flg(Fsens, POS);
   motor_set_speed(Amotor, 0, 1);
 }
-
+*/
 /*----------- メニュー -----------*/
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
   {"Start", NULL},
   {"Calibration", calibrate},
   {"Collect All", collect_all},
-  {"Collect Red Ball", collect_red_ball},
   {"Exit", ecrobot_restart_NXT},	// OSの制御に戻る
 //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -258,12 +257,6 @@ void alg_collect_all(void)
   //arm_func(10, 30);
 }
 
-void collect_red_ball(void) {algorithm = alg_collect_red_ball;}
-void alg_collect_red_ball(void)
-{
-
-}
-
 /*----------- タスク群 -----------*/
 void SensTsk(VP_INT exinf)
 {
@@ -272,7 +265,8 @@ void SensTsk(VP_INT exinf)
   U8 CBits = 0;
 
 	for (;;) {
-		wai_sem(Stskc);
+    dly_tsk(5);
+    //wai_sem(Stskc);
 
     // カラーセンサー
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
@@ -280,8 +274,8 @@ void SensTsk(VP_INT exinf)
             bin(col[1], COL_THRES[1], 1) |
             bin(col[2], COL_THRES[2], 0);
     // フラッグをクリアしてからセットする
-    //clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
-    //                 RED | MAG | YEL | WHT)); (?)
+    clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
+                     RED | MAG | YEL | WHT)); //(?)
     switch(CBits){
       case 0: set_flg(Fsens, BLK); break;
       case 1: set_flg(Fsens, BLU); break;
@@ -306,7 +300,7 @@ void SensTsk(VP_INT exinf)
     }
 	}
 
-  sig_sem(Stskc);
+  //sig_sem(Stskc);
 }
 
 void NbtnTsk(VP_INT exinf)
@@ -459,8 +453,8 @@ void TimrTsk(VP_INT exinf)
 
 void DispTsk(VP_INT exinf)
 {
-  //T_RFLG sens;
-  FLGPTN sens;
+  T_RFLG sens;
+  //FLGPTN sens;
 
   display_clear(0);
 
@@ -468,14 +462,23 @@ void DispTsk(VP_INT exinf)
   display_goto_xy(0, 0);
   display_string(name);
 
+  /* Message */
+  display_goto_xy(1, 1);
+  display_string("Arm:");
+  display_int(nxt_motor_get_count(Amotor), 4);
+  display_goto_xy(1, 2);
+  display_string("Lmotor:"); display_int(Ldeg, 4);
+  display_goto_xy(1, 3);
+  display_string("Rmotor:"); display_int(Rdeg, 4);
+
   /* Footer */
   display_goto_xy(0, 7);
-  //ref_flg(Fsens, &sens);
-  wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
-                 MAG | YEL | WHT | RTP | LTP |
-                 RTR | LTR | POS | DIS, TWF_ORW, &sens);
+  ref_flg(Fsens, &sens);
+  //wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
+  //               MAG | YEL | WHT | RTP | LTP |
+  //               RTR | LTR | POS | DIS, TWF_ORW, &sens);
 
-  switch(sens){
+  switch(sens.flgptn){
     // カラー表示
     case BLK: display_string("K"); break;
     case BLU: display_string("B"); break;
@@ -552,7 +555,7 @@ void ColsTsk(VP_INT exinf)
 /*----------- 周期 タイマー群 -----------*/
 void MoveCyc(VP_INT exinf)
 {
-  isig_sem(Stskc);	// MoveTskを進めるためにセマフォを操作
+  //isig_sem(Stskc);	// MoveTskを進めるためにセマフォを操作
 }
 
 void DispCyc(VP_INT exinf)
