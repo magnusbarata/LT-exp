@@ -22,7 +22,7 @@
 #include <t_services.h>
 #include "ecrobot_interface.h"
 #include "mytypes.h"		// U8の定義が必要
-#define REVERSE
+//#define REVERSE
 
 #define ARRAYSIZE(A)	(sizeof((A)) / sizeof((A)[0]))
 
@@ -115,7 +115,7 @@ int spd_limit(const int val)
   else return val;
 }
 
-void mov_func(const int POW, int RATIO, const int DEG)
+void mov_func(const int POW, const int RATIO, int DEG)
 {
   // TODO: バックしながら曲がる
   // RATIO: 正-左, 負-右, 0-直進
@@ -129,19 +129,20 @@ void mov_func(const int POW, int RATIO, const int DEG)
   nxt_motor_set_count(Lmotor, 0);
   nxt_motor_set_count(Rmotor, 0);
   prev_err = integral = derivative = 0;
+  if (POW < 0) DEG *= -1;
 
   do{
     wai_sem(Stskc);
 
     // PID制御
-    Ldeg = nxt_motor_get_count(Lmotor);
-    Rdeg = nxt_motor_get_count(Rmotor);
+    Ldeg = nxt_motor_get_count(Lmotor) % 360;
+    Rdeg = nxt_motor_get_count(Rmotor) % 360;
     cur_err = Ldeg - Rdeg　- RATIO;  // 角度の差 OR角度の比率(?)
     //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
     integral = integral + cur_err;
     derivative = cur_err - prev_err;
     turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(Lmotor, POW - spd_limit(turn), 1) // POW
+    motor_set_speed(Lmotor, POW - spd_limit(turn), 1);
     motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
     prev_err = cur_err;
 
@@ -165,7 +166,7 @@ void arm_func(int POW, const int DEG)
   // DEG: 正-下, 負-上
   int Adeg;
   nxt_motor_set_count(Amotor, 0);
-  if(DEG < 0)POW = -2*POW;
+  if(DEG < 0) POW = -2*POW;
   while(1){
     wai_sem(Stskc); //dly_tsk()?
     Adeg = nxt_motor_get_count(Amotor);
@@ -407,7 +408,7 @@ void MainTsk(VP_INT exinf)
   act_tsk(Tmusc);
 
   sta_cyc(Cmove);
-  //sta_cyc(Cdisp);
+  sta_cyc(Cdisp);
   (*algorithm)();
 }
 
