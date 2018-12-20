@@ -2,6 +2,12 @@
  *	TOPPERS/JSPを用いたライントレーサーのサンプルコード
  */
 
+/*
+  TODO:
+    calibration(), collect_all()
+  EXP:
+    Motor, Arm, Display, Sound, Collect All
+*/
 #include "display.h" // 変更したバージョンを使うために先頭でinclude
 
 #include "kernel_id.h"
@@ -11,8 +17,12 @@
 #include "jouga_cfg.h"
 #include "jouga.h"
 #include "music.h"
-#include "button.h"
 #include "graphics.h"
+
+#include <t_services.h>
+#include "ecrobot_interface.h"
+#include "mytypes.h" // U8の定義が必要
+#define REVERSE
 
 #define ARRAYSIZE(A) (sizeof((A)) / sizeof((A)[0]))
 
@@ -26,158 +36,182 @@ typedef struct _NameFunc
 
 typedef enum
 {
-  BLACK = 0,
-  BLUE,
-  GREEN,
-  CYAN,
-  RED,
-  MAGENTA,
-  YELLOW,
-  WHITE,
-  COLORNUM,
-} CalcColor;
+  BLK = 1 << 0,  // 黒
+  BLU = 1 << 1,  // 青
+  GRN = 1 << 2,  // 緑
+  CYA = 1 << 3,  // シアン
+  RED = 1 << 4,  // 赤
+  MAG = 1 << 5,  // マゼンタ
+  YEL = 1 << 6,  // 黄
+  WHT = 1 << 7,  // 白
+  RTP = 1 << 8,  // 右押す
+  RTR = 1 << 9,  // 右離す
+  LTP = 1 << 10, // 左押す
+  LTR = 1 << 11, // 左離す
+  DIS = 1 << 12, // 移動距離
+  POS = 1 << 13, // アーム位置
+  // 以下ライトセンサー?
+} EBits;
 
-void calibration_func(void);
-void algorithm_collect(void);
+typedef enum
+{
+  Obtn = 1 << 0,
+  Lbtn = 1 << 1,
+  Rbtn = 1 << 2,
+  Cbtn = 1 << 3,
+} Nbtns;
 
-/* Displaying Sensor Output */
-void dispColor_func(void);
-void dispTouch_func(void);
-void dispSonar_func(void);
-void jouga_collect();
+U8 ecrobot_get_button_state(void);
+void ecrobot_poll_nxtstate(void);
+
+void calibrate(void);
+void collect_all(void);
+void collect_red_ball(void);
+void calibration(void);
+void alg_collect_all(void);
+void alg_collect_red_ball(void);
+
 /* 外部変数の定義 */
 char name[17];
-int lval, cval;
-int llow = LOWVAL, lhigh = HIGHVAL;
-int clow = LOWVAL, chigh = HIGHVAL;
-void (*jouga_algorithm)(void) = jouga_collect; // デフォルトの設定
+void (*algorithm)(void) = calibration;
 
-NameFunc MainMenu[] = {
-    {"Main Menu", NULL},
-    {"Calibration", calibration_func}, // センサーのキャリブレーション
-    {"Display Color", dispColor_func},
-    {"Display Touch", dispTouch_func},
-    {"Display Sonar", dispSonar_func},
-    {"Start", NULL},               // ライントレースの開始
-    {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
-                                   //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
-};
-
-/* ライトセンサーやカラーセンサーの値を0-1023で読み込む(小さいほど暗い) */
-int get_light_sensor(int Sensor)
+/*----------- 雑多な関数群 -----------*/
+void wait_for_release(void)
 {
-  if (Sensor == Light)
+  while (ecrobot_get_button_state())
   {
-    return 1024 - 1 - ecrobot_get_light_sensor(Sensor);
-  }
-  else
-  {
-    return ecrobot_get_nxtcolorsensor_light(Sensor);
+    dly_tsk(7);
+    ecrobot_poll_nxtstate();
   }
 }
 
-int Color_func(void)
+U8 get_btn(void)
 {
-  S16 col[3];
-  U8 bits = 0;
+  U8 btn, t;
 
-  // Read Color value
-  ecrobot_get_nxtcolorsensor_rgb(Color, col);
-  bits = bin(col[0], 400, 2) |
-         bin(col[1], 350, 1) |
-         bin(col[2], 320, 0);
-
-  return bits;
+  do
+  {
+    dly_tsk(7);
+    ecrobot_poll_nxtstate();
+  } while (!(btn = ecrobot_get_button_state()));
+  while ((t = ecrobot_get_button_state()))
+  {
+    btn |= t;
+    dly_tsk(7);
+    ecrobot_poll_nxtstate();
+  }
+  return btn;
 }
 
-/* Rightタッチセンサー */
-int R_Touch_func(void)
+U8 bin(const int val, const int div, const int n)
 {
-  return ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
+  if (val > div)
+    return 1 << n;
+  return 0 << n;
 }
 
-/* Leftタッチセンサー */
-int L_Touch_func(void)
+int spd_limit(const int val)
 {
-  return ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
-}
-
-// angle = アームを動かす角度, direction = -1, 上げる direction = 1 下げる
-// ちょっとよくわからんから適宜変えないと
-void MoveArm(int angle, int direction)
-{
-  nxt_motor_set_count(Amotor, 0);
-  nxt_motor_set_speed(Amotor, 10 * direction, 0);
-
-  // angle * 2 or angle?
-  // 逆回転だと負の回転数が返ってくるかもしれないので計算
-  while (nxt_motor_get_count(Amotor) * direction <= angle * 2)
-    ;
-  nxt_motor_set_speed(Amotor, 0, 0);
-}
-
-int spd_limit(int val)
-{
-  if (val > 10)
-    return 10;
-  else if (val < -10)
-    return -10;
+  if (val > 20)
+    return 20;
+  else if (val < -20)
+    return -20;
   else
     return val;
 }
 
-// 受け取った角度をステアリングする (正→右周り, 0→直進, 負→左回り)
-// 先生が作ったものとは逆の設定です. Rをマスターとする
-void MoveSteer(int power, int steerAngle)
+void mov_func(const int POW, int RATIO, const int DEG)
 {
-  int Rdeg, Ldeg, error, turn;
-  int prev_err, integral = 0, derivative = 0;
-  double kp = 100.0;
-  double ki = 25;
+  //正：右，負：左
+  int Ldeg, Rdeg, turn;
+  int cur_err, prev_err, integral, derivative;
+  double kp = 70.0;
+  double ki = 0;
   double kd = 0;
 
   nxt_motor_set_count(Lmotor, 0);
   nxt_motor_set_count(Rmotor, 0);
+  prev_err = integral = derivative = 0;
 
   do
   {
-    Rdeg = nxt_motor_get_count(Rmotor) + steerAngle;
+    //wai_sem(Stskc);
+
+    // PID制御
     Ldeg = nxt_motor_get_count(Lmotor);
-    error = Ldeg - Rdeg;
+    Rdeg = nxt_motor_get_count(Rmotor);
+    cur_err = Ldeg - Rdeg - RATIO;
+    //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
+    integral = integral + cur_err;
+    derivative = cur_err - prev_err;
+    turn = kp * cur_err + ki * integral + kd * derivative;
+    motor_set_speed(Lmotor, POW - spd_limit(turn), 1); // -spd_limit(turn)?
+    motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
+    prev_err = cur_err;
 
-    // PID
-    integral = integral + error;
-    derivative = error - prev_err;
-    turn = kp * error + ki * integral + kd * derivative;
-
-    // Control
-    motor_set_speed(Rmotor, power, 1);                   // Master
-    motor_set_speed(Lmotor, power - spd_limit(turn), 1); // Slave
-    prev_err = error;
+    // モーター角度表示
+    display_goto_xy(1, 2);
+    display_string("Lmotor:");
+    display_int(Ldeg, 4);
+    display_goto_xy(1, 3);
+    display_string("Rmotor:");
+    display_int(Rdeg, 4);
+    display_update();
+    if (POW < 0 && Ldeg <= DEG)
+      break;
+    else if (POW > 0 && Ldeg >= DEG)
+      break;
   } while (1);
+  //set_flg(Fsens, DIS);
+  motor_set_speed(Lmotor, 0, 1);
+  motor_set_speed(Rmotor, 0, 1);
 }
 
-// 最初にpowerでモーターセットして, length分だけステアリング動作をPI制御するラッパー関数
-void Move_length(int power, int steer, int length)
+void arm_func(int POW, const int DEG)
 {
-  motor_set_speed(Rmotor, power, 1);
-  motor_set_speed(Lmotor, power, 1);
-  int i = 0;
-  do
-  {
-    i++;
-    MoveSteer(power, steer);
-  } while (i < length);
-  motor_set_speed(Rmotor, 0, 0);
-  motor_set_speed(Lmotor, 0, 0);
+  // TODO: 上げ下げのオプション
+  // 正：下，負：上
+  int Adeg;
+  nxt_motor_set_count(Amotor, 0);
+  if (DEG < 0)
+    POW = -2 * POW;
+  while (1)
+  { // <= OR >= (?)
+    wai_sem(Stskc);
+    Adeg = nxt_motor_get_count(Amotor);
+    if (DEG < 0 && Adeg <= DEG)
+      break;
+    else if (DEG > 0 && Adeg >= DEG)
+      break;
+    motor_set_speed(Amotor, POW, 1);
+
+    // アーム角度表示
+    display_goto_xy(1, 1);
+    display_string("Arm:");
+    display_int(nxt_motor_get_count(Amotor), 4);
+    display_update();
+  }
+  //set_flg(Fsens, POS);
+  motor_set_speed(Amotor, 0, 1);
 }
+
+/*----------- メニュー -----------*/
+NameFunc MainMenu[] = {
+    {"Main Menu", NULL},
+    {"Start", NULL},
+    {"Calibration", calibrate},
+    {"Collect All", collect_all},
+    {"Collect Red Ball", collect_red_ball},
+    {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
+                                   //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
+};
 
 /* メニューを表示して選択されるのを待つ */
 void func_menu(NameFunc *tbl, int cnt)
 {
   int i;
   static int menu = 1;
-  nxtButton btn;
+  U8 btn;
 
   for (;;)
   {
@@ -219,310 +253,526 @@ void func_menu(NameFunc *tbl, int cnt)
     }
     break;
   }
+  act_tsk(Tmain);
 }
 
-/* 白と黒のセンサーの読み取り値を校正 */
-void calibration_func(void)
+void alg_collect_blue_ball()
 {
-  nxtButton btn;
-  int lmin, lmax;
-  int cmin, cmax;
-  int i;
 
-  display_clear(0);
-  motor_set_speed(Lmotor, LOWPOWER / 3 + 10, 1);
-  motor_set_speed(Rmotor, LOWPOWER / 3 + 10, 1);
-  //lmin = lmax = get_light_sensor(Light);
-  cmin = cmax = get_light_sensor(Color);
+  // hardCoding
+  // とりあえず前進
 
-  // しばらくの間データを取得
-  for (i = 0; i < 150; i++)
+  mov_func(-LOWPOWER, 0, -1500);
+  arm_func(-LOWPOWER, 500);
+
+  // アームを上げた状態で少し前進
+  mov_func(LOWPOWER, 0, 360);
+  // アームを下げる
+  arm_func(LOWPOWER, 500);
+  // バック
+
+  // 左に曲がる
+  mov_func(LOWPOWER, -45, 700);
+  // 右に曲がりながらピンクエリアへ向かう(このぐらいの曲がり具合なら途中で壁に当たればピンクエリアへ向かう)
+  mov_func(HIGHPOWER, 10, 1500);
+
+  // アーム上げ下げしてオブジェクトを置く
+  arm_func(-LOWPOWER, 500);
+  // バック
+  mov_func(-HIGHPOWER, 0, 2000);
+  act_tsk(Tmotr);
+}
+
+void Steering(int direction, int angle)
+{
+  // direction (-1 : 左 | 1 : 右)
+  // angle (ステアリング角度の絶対値)
+
+  nxt_motor_set_count(Rmotor, 0);
+  nxt_motor_set_count(Lmotor, 0);
+  int RmotorCount = 0;
+  int LmotorCount = 0;
+
+  int masterMotorCount;
+
+  if (direction == 1)
   {
-    dly_tsk(20);
-    //lval = get_light_sensor(Light);
-    cval = get_light_sensor(Color);
-    if (lval < lmin)
-      lmin = lval;
-    if (lval > lmax)
-      lmax = lval;
-    if (cval < cmin)
-      cmin = cval;
-    if (cval > cmax)
-      cmax = cval;
-    display_goto_xy(0, 1);
-    display_string("cur: ");
-    display_int(lval, 4);
-    display_int(cval, 4);
-    display_goto_xy(0, 3);
-    display_string("min: ");
-    display_int(lmin, 4);
-    display_int(cmin, 4);
-    display_goto_xy(0, 5);
-    display_string("max: ");
-    display_int(lmax, 4);
-    display_int(cmax, 4);
-    display_update();
+    nxt_motor_set_speed(Rmotor, 0, 1);
+    nxt_motor_set_speed(Lmotor, 50, 0);
   }
-  // データ取得終了
-  motor_set_speed(Lmotor, 0, 0);
-  motor_set_speed(Rmotor, 0, 0);
-  display_goto_xy(3, 7);
-  display_string("Is this OK?");
-  display_update();
-  do
+  else
   {
-    btn = get_btn();
-    if (btn == Cbtn)
-      return;
-  } while (btn != Obtn);
-  llow = lmin;
-  lhigh = lmax;
-  clow = cmin;
-  chigh = cmax;
+    nxt_motor_set_speed(Lmotor, 0, 1);
+    nxt_motor_set_speed(Rmotor, 50, 0);
+  }
+
+  while (masterMotorCount > angle)
+  {
+    RmotorCount = nxt_motor_get_count(Rmotor);
+    LmotorCount = nxt_motor_get_count(Lmotor);
+    if (direction == 1)
+    {
+      masterMotorCount = LmotorCount;
+    }
+    else
+    {
+      masterMotorCount = RmotorCount;
+    }
+  }
+  // いったん止めます
+  nxt_motor_set_speed(Rmotor, 0, 1);
+  nxt_motor_set_speed(Lmotor, 0, 1);
+}
+void calibrate(void) { algorithm = calibration; }
+void calibration(void)
+{
+
+  /* -------------------緑エリアから真ん中のタイヤを取得してピンクエリアへ運ぶコード(ピンクエリアの青ボールも取得)----------------------------*/
+  /*
+  // アーム上げる
+  arm_func(20, -30);
+  mov_func(-50, 0, -1800);
+  // アーム下げる
+  arm_func(20, 30);
+  //右寄りに進む
+  mov_func(-50, -20, -2400);
+  mov_func(50, 0, 180);
+  arm_func(20, -50);
+  mov_func(50, 0, 1000);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 0, -2200);
+*/
+  /* -----------------------------------------------------------------*/
+
+  // 1個目
+  mov_func(-50, 0, 100);
+  Steering(-1, 360 * 3);
+  arm_func(20, -30);
+  mov_func(-50, 20, 1000);
+  mov_func(50, 0, 100);
+  arm_func(20, 30);
+
+  // 2個目
+  mov_func(50, 0, 360);
+  Steering(-1, 360 * 2);
+  mov_func(-50, 0, 1250);
+
+  // 3個目
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 3);
+  mov_func(-50, 0, 2500);
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, 250);
+  Steering(1, 360 * 4);
+  mov_func(-50, 0, 750);
+
+  // 4個目
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, 750);
+  Steering(1, 360 * 5);
+  mov_func(-50, 0, 1500);
+  // 1歩下がってアーム上げ下げしてボール取得
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(-50, 0, -100);
+  arm_func(20, 30);
+  // 揺らす?
+  mov_func(50, 0, 100);
+  mov_func(-50, 0, 100);
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+
+  // 帰宅
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 3);
+  mov_func-50, 0, 1000);
+
+  // ピンクエリアに設置
+  //arm_func(30, -60);
+  // ちょっと押す
+  //mov_func(-50, 0, -100);
+
+  //mov_func(70, 0, 2000);
+  //mov_func(-70, 200, -8000);
+  //mov_func(-70, 0, -4000);
+
+  // TO TEST
+  // arm_func(10, 30); // アームを下げる
+  // arm_func(10, -30); // アームを上げる
+  // mov_func(-40, 0, -700); // 直進
+  // mov_func(40, 0, 700); // 直進
+  //  mov_func(-40, 20, -3000); //　左曲がり
+  // mov_func(-40, -20, -3000); // 右曲がり
+
+  // mov_func(-100, 0, 1000);
+  //arm_func(10, -30); // アームを下げる
+  // arm_func(20, 30); // アームを上げる
+  // mov_func(100, 0, 1000);
 }
 
-/* Displaying Sensor Output */
-U8 bin(const int val, const int div, const int n)
+/*----------- アルゴリズム群 -----------*/
+void collect_all(void) { algorithm = alg_collect_all; }
+void alg_collect_all(void)
 {
-  if (val > div)
-    return 1 << n;
-  return 0 << n;
+  //arm_func(10, 30);
 }
-void dispColor_func(void)
+
+void collect_red_ball(void) { algorithm = alg_collect_red_ball; }
+void alg_collect_red_ball(void)
 {
+}
+
+/*----------- タスク群 -----------*/
+void SensTsk(VP_INT exinf)
+{
+  static int COL_THRES[] = {400, 350, 320};
   S16 col[3];
-  U8 bits;
-  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
-  display_clear(0);
+  U8 CBits = 0;
+
   for (;;)
   {
-    // Read Color value
-    dly_tsk(100);
-    ecrobot_get_nxtcolorsensor_rgb(Color, col);
-    bits = bin(col[0], 400, 2) |
-           bin(col[1], 350, 1) |
-           bin(col[2], 320, 0);
+    wai_sem(Stskc);
 
-    // Display Color
-    display_goto_xy(2, 2);
-    display_int(col[0], 4);
-    display_int(col[1], 4);
-    display_int(col[2], 4);
-    display_goto_xy(3, 7);
-    switch (bits)
+    // カラーセンサー
+    ecrobot_get_nxtcolorsensor_rgb(Color, col);
+    CBits = bin(col[0], COL_THRES[0], 2) |
+            bin(col[1], COL_THRES[1], 1) |
+            bin(col[2], COL_THRES[2], 0);
+    // フラッグをクリアしてからセットする
+    //clr_flg(Fsens, ~(BLK | BLU | GRN | CYA |
+    //                 RED | MAG | YEL | WHT)); (?)
+    switch (CBits)
     {
-    case BLACK:
-      display_string("BLACK");
+    case 0:
+      set_flg(Fsens, BLK);
       break;
-    case BLUE:
-      display_string("BLUE");
+    case 1:
+      set_flg(Fsens, BLU);
       break;
-    case GREEN:
-      display_string("GREEN");
+    case 2:
+      set_flg(Fsens, GRN);
       break;
-    case CYAN:
-      display_string("CYAN");
+    case 3:
+      set_flg(Fsens, CYA);
       break;
-    case RED:
-      display_string("RED");
+    case 4:
+      set_flg(Fsens, RED);
       break;
-    case MAGENTA:
-      display_string("MAGENTA");
+    case 5:
+      set_flg(Fsens, MAG);
       break;
-    case YELLOW:
-      display_string("YELLOW");
+    case 6:
+      set_flg(Fsens, YEL);
       break;
-    case WHITE:
-      display_string("WHITE");
+    case 7:
+      set_flg(Fsens, WHT);
       break;
     }
-    display_update();
+
+    // タッチセンサー
+    if (ecrobot_get_touch_sensor(Rtouch))
+    {
+      set_flg(Fsens, RTP);
+    }
+    else
+    {
+      set_flg(Fsens, RTR);
+    }
+    if (ecrobot_get_touch_sensor(Ltouch))
+    {
+      set_flg(Fsens, LTP);
+    }
+    else
+    {
+      set_flg(Fsens, LTR);
+    }
   }
+
+  sig_sem(Stskc);
 }
 
-U8 flag1;
-U8 flag2;
-void dispTouch_func(void)
+void NbtnTsk(VP_INT exinf)
 {
-  // Touch sensor display
-  nxtButton btn;
-  display_clear(0);
+  U8 btn;
 
   for (;;)
   {
-    flag1 = ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
-    flag2 = ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
+    wai_sem(Snbtn);
+    btn = ecrobot_get_button_state();
     switch (btn)
-    { // btn = get_btn()?
+    {
+    case Obtn:
+      set_flg(Fnbtn, Obtn);
+      break;
+    case Lbtn:
+      set_flg(Fnbtn, Lbtn);
+      break;
+    case Rbtn:
+      set_flg(Fnbtn, Rbtn);
+      break;
     case Cbtn:
+      set_flg(Fnbtn, Cbtn);
       break;
     default:
-      continue;
+      ecrobot_poll_nxtstate();
+      break;
     }
-    break;
+    sig_sem(Snbtn);
+    dly_tsk(10);
   }
 }
 
-void dispSonar_func(void)
+void QuitTsk(VP_INT exinf)
 {
+  //FLGPTN BtnSens;
+
   for (;;)
   {
-    display_goto_xy(0, 2);
-    display_int(ecrobot_get_sonar_sensor(Sonar), 4);
-    display_update();
+    /*wai_flg(Fnbtn, Obtn, TWF_ORW, &BtnSens);
+    if(BtnSens){ // (BtnSens == Obtn) OR case?
+      nxt_motor_set_speed(Rmotor, 0, 0);
+      nxt_motor_set_speed(Lmotor, 0, 0);
+      nxt_motor_set_speed(Amotor, 0, 1);
+      stp_cyc(Cmove);
+      stp_cyc(Cdisp);
+      ter_tsk(Tinit);
+      ter_tsk(Tsens);
+      ter_tsk(Tnbtn);
+      ter_tsk(Tmove);
+      ter_tsk(Tmotr);
+      ter_tsk(Ttimr);
+      ter_tsk(Tmusc);
+      ter_tsk(Tmain);
+      ter_tsk(Tdisp);
+      act_tsk(Tinit);
+      clr_flg(Fsens, ~(Obtn | Lbtn | Rbtn | Cbtn));
+    }*/
+    wai_sem(Snbtn);
+    check_NXT_buttons();
+    if (ecrobot_is_ENTER_button_pressed())
+    {
+      nxt_motor_set_speed(Rmotor, 0, 0);
+      nxt_motor_set_speed(Lmotor, 0, 0);
+      nxt_motor_set_speed(Amotor, 0, 1);
+      stp_cyc(Cmove);
+      stp_cyc(Cdisp);
+      ter_tsk(Tinit);
+      ter_tsk(Tsens);
+      ter_tsk(Tnbtn);
+      ter_tsk(Tmove);
+      ter_tsk(Tmotr);
+      ter_tsk(Ttimr);
+      ter_tsk(Tmusc);
+      ter_tsk(Tmain);
+      ter_tsk(Tdisp);
+      act_tsk(Tinit);
+    }
+    sig_sem(Snbtn);
+    dly_tsk(5);
+    ter_tsk(Tquit);
   }
 }
 
-/*
- * アルゴリズム実現関数群
- *	実際に機体を動かす
- *	周期タイマがセマフォを操作することで定期的に起動される
- *	ここを直すことで考えているアルゴリズムを実現できる
- */
-
-void jouga_collect(void)
-{
-  jouga_algorithm = algorithm_collect;
-}
-
-void algorithm_collect(void)
-{
-  S16 col[3];
-  U8 bits;
-  ecrobot_set_nxtcolorsensor(Color, NXT_COLORSENSOR);
-  for (;;)
-  {
-    wai_sem(Stskc); // セマフォを待つことで定期的な実行を実現
-
-    flag1 = ecrobot_get_touch_sensor(Rtouch); //if 1 = on, 0 = off
-    flag2 = ecrobot_get_touch_sensor(Ltouch); //if 1 = on, 0 = off
-    ecrobot_get_nxtcolorsensor_rgb(Color, col);
-    bits = bin(col[0], 400, 2) |
-           bin(col[1], 350, 1) |
-           bin(col[2], 320, 0);
-  }
-}
-
-/*
- * TASK: InitTsk
- *	初期設定を行うタスク
- */
 void InitTsk(VP_INT exinf)
 {
   display_clear(0); // なにはともあれ、画面をクリア
   display_goto_xy(2, 3);
   display_string("Initializing");
   display_update();
-  // カラーセンサーを使う場合にはライトセンサーとして使う
-  // REDが一番ダイナミックレンジが広いようなので、あえてWHITEでなくREDで
-  ecrobot_set_nxtcolorsensor(Color, NXT_LIGHTSENSOR_RED);
   ecrobot_get_bt_device_name(name); // システム名の取得
+  act_tsk(Tsens);
+  act_tsk(Tnbtn);
+  act_tsk(Tdisp);
+  act_tsk(Tmove);
 
-  act_tsk(Tmain);
-}
-
-/*
- * TASK: MainTsk
- *	周期起動用のタイマを起動して終了
- */
-void MainTsk(VP_INT exinf)
-{
-  // ここにくるのにボタンを押しているので、
   // ボタンが押されていない状態になるまで待つ
   wait_for_release();
-  wai_sem(Snbtn); // ボタンに関する権利を取得
-  // メインメニューの表示
-  func_menu(MainMenu, ARRAYSIZE(MainMenu));
-  sig_sem(Snbtn); // ボタンに関する権利を開放
+  wai_sem(Snbtn);                           // ボタンに関する権利を取得
+  func_menu(MainMenu, ARRAYSIZE(MainMenu)); // メインメニューの表示
+  sig_sem(Snbtn);                           // ボタンに関する権利を開放
+}
 
+void MainTsk(VP_INT exinf)
+{
   // 画面をきれいにする
   display_clear(0);
   display_goto_xy(0, 0);
   display_update();
 
-  // BGM用のタスクを起動
+  act_tsk(Tquit);
+  act_tsk(Ttimr);
   act_tsk(Tmusc);
 
-  // 移動用のタスクを起動
-  act_tsk(Tmove);
-
-  // 表示用のタスクを定期起動するためのタイマを起動
-  sta_cyc(Cdisp);
+  sta_cyc(Cmove);
+  //sta_cyc(Cdisp);
+  (*algorithm)();
 }
 
-/*
- * TASK: MoveTsk
- *	実際に機体を動かす
- *	周期タイマがセマフォを操作することで定期的に起動される
- *	たぶん、ここを直すことで考えているアルゴリズムを実現できる
- */
 void MoveTsk(VP_INT exinf)
 {
-  sta_cyc(Cmove); // 定期的にセマフォを上げるタイマ
+  FLGPTN MtrSens;
 
-  (*jouga_algorithm)(); // 実際の処理
-}
-
-/*
- * TASK: DispTsk
- *	通常動作時にシステム内の様子を表示
- *	周期タイマにより定期的に起動される
- */
-void DispTsk(VP_INT exinf)
-{
-  display_clear(0);
-
-  /* システム名の表示 */
-  display_goto_xy(0, 0);
-  display_string(name);
-  display_string("state"); // 現在のマシンの状態を表示します.
-  display_int(ecrobot_get_systick_ms, 3);
-  /* センサーの読み取り値の表示 */
-  display_goto_xy(0, 6);
-  display_string("Rt:");
-  display_int(R_Touch_func(), 2);
-  display_string(" Lt:");
-  display_int(L_Touch_func(), 2);
-  display_string("C:");
-  display_int(Color_func(), 2);
-
-  display_update();
-}
-/*
- * TASK: IdleTsk
- *	Idle時に動作する（優先順位は低い）
- *	Cyclic Timerでなくdly_tskしているのは、
- *	セマフォで待っているときに複数起動しても意味がないため
- */
-void IdleTsk(VP_INT exinf)
-{
   for (;;)
   {
-    wai_sem(Snbtn); // InitTskとNXTボタンを取り合う
-    check_NXT_buttons();
-    if (ecrobot_is_ENTER_button_pressed())
-    {
-      stp_cyc(Cmove);
-      stp_cyc(Cdisp);
-      ter_tsk(Tmove);
-      ter_tsk(Tmusc);
-      ter_tsk(Tmain);
-      nxt_motor_set_speed(Rmotor, 0, 0);
-      nxt_motor_set_speed(Lmotor, 0, 0);
-      act_tsk(Tmain);
+    /*wai_flg(Fsens, DIS, TWF_ORW, &MtrSens);
+    switch(MtrSens){
+    case(DIS):
+      motor_set_speed(Lmotor, 0, 1);
+      motor_set_speed(Rmotor, 0, 1);
     }
-    sig_sem(Snbtn); // NXTボタンの権利を返却
-    dly_tsk(10);
+    clr_flg(Fsens, ~DIS);*/
   }
+}
+
+void MotrTsk(VP_INT exinf)
+{
+  FLGPTN ArmSens; // twai_flg() OR ref_flg()?
+
+  for (;;)
+  {
+    /*wai_flg(Fsens, POS, TWF_ANDW, &ArmSens); // TWF_ORW | TWF_CLR
+    if(ArmSens == POS) motor_set_speed(Amotor, 0, 1);
+    //else continue;?
+    /* switch(ArmSens){
+      case POS: motor_set_speed(Amotor, 0, 1); break;
+    } 
+    clr_flg(Fsens, ~POS);*/
+  }
+}
+
+void TimrTsk(VP_INT exinf)
+{
+  static unsigned int s = 0;
+  for (;;)
+  {
+    // 10秒ごとに音鳴らす
+    dly_tsk(1000);
+    s++;
+    if (!(s % 10))
+      ecrobot_sound_tone(220, 100, 60);
+  }
+}
+
+void DispTsk(VP_INT exinf)
+{
+  FLGPTN sens;
+
+  display_clear(0);
+
+  /* Header */
+  display_goto_xy(0, 0);
+  display_string(name);
+
+  /* Footer */
+  display_goto_xy(0, 7);
+  //ref_flg(Fsens, &sens);
+  wai_flg(Fsens, BLK | BLU | GRN | CYA | RED | MAG | YEL | WHT | RTP | LTP | RTR | LTR | POS | DIS, TWF_ORW, &sens);
+
+  switch (sens)
+  {
+  // カラー表示
+  case BLK:
+    display_string("K");
+    break;
+  case BLU:
+    display_string("B");
+    break;
+  case GRN:
+    display_string("G");
+    break;
+  case CYA:
+    display_string("C");
+    break;
+  case RED:
+    display_string("R");
+    break;
+  case MAG:
+    display_string("M");
+    break;
+  case YEL:
+    display_string("Y");
+    break;
+  case WHT:
+    display_string("W");
+    break;
+
+    // タッチ表示
+  case LTP:
+    display_goto_xy(1, 7);
+    display_string("[");
+    break;
+  case RTP:
+    display_goto_xy(2, 7);
+    display_string("]");
+    break;
+    // case (LTP & LTR) | (RTP & RTR):
+    //display_goto_xy(1, 7); display_string("[]");
+    //break;
+
+  // モーターとアーム
+  case POS:
+    display_goto_xy(3, 7);
+    display_string("P");
+    break;
+  case DIS:
+    display_goto_xy(4, 7);
+    display_string("D");
+    break;
+
+  default:
+    display_goto_xy(1, 7);
+    display_string("----");
+    break;
+  }
+
+  display_update();
 }
 
 void MuscTsk(VP_INT exinf)
 {
+  FLGPTN ColSens;
+
+  for (;;)
+  {
+    wai_flg(Fsens, BLK | BLU | GRN | CYA | RED | MAG | YEL | WHT | RTP | LTP | RTR | LTR | POS | DIS, TWF_ORW, &ColSens);
+
+    // 色ごとに音が変わる(C4からC5まで)
+    switch (ColSens)
+    {
+    case BLK:
+      ecrobot_sound_tone(262, 100, 70);
+      break;
+    case BLU:
+      ecrobot_sound_tone(294, 100, 70);
+      break;
+    case GRN:
+      ecrobot_sound_tone(330, 100, 70);
+      break;
+    case CYA:
+      ecrobot_sound_tone(349, 100, 70);
+      break;
+    case RED:
+      ecrobot_sound_tone(392, 100, 70);
+      break;
+    case MAG:
+      ecrobot_sound_tone(440, 100, 70);
+      break;
+    case YEL:
+      ecrobot_sound_tone(494, 100, 70);
+      break;
+    case WHT:
+      ecrobot_sound_tone(523, 200, 0);
+      break;
+    }
+    //dly_tsk(10);
+
+    //play_notes(TIMING_chiba_univ, 8, chiba_univ);
+    // TODO: 状態ごとに音変わる ()
+  }
 }
-/*
- * TASK: ColsTsk
- *	Idle時にカラーセンサー用に値を読み込む
- */
+
 void ColsTsk(VP_INT exinf)
 {
   for (;;)
@@ -531,10 +781,8 @@ void ColsTsk(VP_INT exinf)
     dly_tsk(2);
   }
 }
-/*
- * 周期タイマ
- *	タスクを定期的に起動するだけ
- */
+
+/*----------- 周期 タイマー群 -----------*/
 void MoveCyc(VP_INT exinf)
 {
   isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
@@ -554,7 +802,7 @@ void jsp_systick_low_priority(void)
   }
 }
 
-/* システムの初期化ルーチン */
+/*----------- システムフック関数群 -----------*/
 void ecrobot_device_initialize(void)
 {
   nxt_motor_set_speed(Rmotor, 0, 0);
@@ -562,10 +810,9 @@ void ecrobot_device_initialize(void)
   nxt_motor_set_speed(Amotor, 0, 0);
   ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
   //ecrobot_set_light_sensor_active(Light);
-  ecrobot_init_sonar_sensor(Sonar);
+  //ecrobot_init_sonar_sensor(Sonar);
 }
 
-/* システム停止時に呼ばれるルーチン */
 void ecrobot_device_terminate(void)
 {
   nxt_motor_set_speed(Rmotor, 0, 1);
@@ -573,5 +820,5 @@ void ecrobot_device_terminate(void)
   nxt_motor_set_speed(Amotor, 0, 1);
   ecrobot_term_nxtcolorsensor(Color);
   //ecrobot_set_light_sensor_inactive(Light);
-  ecrobot_term_sonar_sensor(Sonar);
+  //ecrobot_term_sonar_sensor(Sonar);
 }
