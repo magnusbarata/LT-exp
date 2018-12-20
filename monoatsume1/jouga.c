@@ -4,7 +4,7 @@
 //みはる，wait_for
 /*
   TODO:
-    calibration(), collect_all()
+    calibration(), collect_all(), reverse(),
   EXP:
     Motor, Arm, Display, Sound, Collect All
 */
@@ -32,6 +32,11 @@ typedef struct _NameFunc {
   char *name;
   MFunc func;
 } NameFunc;
+
+typedef struct t_rflg{
+  ID wtskid;
+  FLGPTN flgptn;
+} T_RFLG;
 
 typedef enum {
 	BLK = 1 << 0,  // 黒
@@ -103,7 +108,8 @@ U8 bin(const int val, const int div, const int n)
   return 0 << n;
 }
 
-int spd_limit(const int val){
+int spd_limit(const int val)
+{
   if(val > 20) return 20;
   else if(val < -20) return -20;
   else return val;
@@ -111,7 +117,9 @@ int spd_limit(const int val){
 
 void mov_func(const int POW, int RATIO, const int DEG)
 {
-  //正：右，負：左
+  // TODO: バックしながら曲がる
+  // RATIO: 正-左, 負-右, 0-直進
+  // POW: 正-バック, 負-進む
   int Ldeg, Rdeg, turn;
   int cur_err, prev_err, integral, derivative;
   double kp = 100.0;
@@ -123,7 +131,7 @@ void mov_func(const int POW, int RATIO, const int DEG)
   prev_err = integral = derivative = 0;
 
   do{
-    //wai_sem(Stskc);
+    wai_sem(Stskc);
 
     // PID制御
     Ldeg = nxt_motor_get_count(Lmotor);
@@ -133,7 +141,7 @@ void mov_func(const int POW, int RATIO, const int DEG)
     integral = integral + cur_err;
     derivative = cur_err - prev_err;
     turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(Lmotor, POW, 1); // -spd_limit(turn)?
+    motor_set_speed(Lmotor, POW - spd_limit(turn), 1) // POW
     motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
     prev_err = cur_err;
 
@@ -154,12 +162,12 @@ void mov_func(const int POW, int RATIO, const int DEG)
 void arm_func(int POW, const int DEG)
 {
   // TODO: 上げ下げのオプション
-  // 正：下，負：上
+  // DEG: 正-下, 負-上
   int Adeg;
   nxt_motor_set_count(Amotor, 0);
   if(DEG < 0)POW = -2*POW;
   while(1){
-    wai_sem(Stskc);
+    wai_sem(Stskc); //dly_tsk()?
     Adeg = nxt_motor_get_count(Amotor);
     if(DEG < 0 && Adeg <= DEG) break;
     else if(DEG > 0 && Adeg >= DEG) break;
