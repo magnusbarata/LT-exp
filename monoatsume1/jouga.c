@@ -1,10 +1,10 @@
 /*
  *	TOPPERS/JSPを用いたライントレーサーのサンプルコード
  */
-
+//みはる，wait_for
 /*
   TODO:
-    calibration(), collect_all()
+    calibration(), collect_all(), reverse(),
   EXP:
     Motor, Arm, Display, Sound, Collect All
 */
@@ -22,6 +22,7 @@
 #include <t_services.h>
 #include "ecrobot_interface.h"
 #include "mytypes.h"		// U8の定義が必要
+//#define REVERSE
 
 #define ARRAYSIZE(A)	(sizeof((A)) / sizeof((A)[0]))
 
@@ -31,6 +32,11 @@ typedef struct _NameFunc {
   char *name;
   MFunc func;
 } NameFunc;
+
+typedef struct t_rflg{
+  ID wtskid;
+  FLGPTN flgptn;
+} T_RFLG;
 
 typedef enum {
 	BLK = 1 << 0,  // 黒
@@ -69,7 +75,7 @@ void alg_collect_red_ball(void);
 
 /* 外部変数の定義 */
 char name[17];
-void (*algorithm)(void) = calibrate;
+void (*algorithm)(void) = calibration;
 
 /*----------- 雑多な関数群 -----------*/
 void wait_for_release(void)
@@ -102,15 +108,18 @@ U8 bin(const int val, const int div, const int n)
   return 0 << n;
 }
 
-int spd_limit(const int val){
+int spd_limit(const int val)
+{
   if(val > 20) return 20;
   else if(val < -20) return -20;
   else return val;
 }
 
-void mov_func(const int POW, int RATIO, const int DEG)
+void mov_func(const int POW, const int RATIO, int DEG)
 {
-  //正：右，負：左
+  // TODO: バックしながら曲がる
+  // RATIO: 正-左, 負-右, 0-直進
+  // POW: 正-バック, 負-進む
   int Ldeg, Rdeg, turn;
   int cur_err, prev_err, integral, derivative;
   double kp = 100.0;
@@ -120,19 +129,20 @@ void mov_func(const int POW, int RATIO, const int DEG)
   nxt_motor_set_count(Lmotor, 0);
   nxt_motor_set_count(Rmotor, 0);
   prev_err = integral = derivative = 0;
+  if (POW < 0) DEG *= -1;
 
   do{
     wai_sem(Stskc);
 
     // PID制御
-    Ldeg = nxt_motor_get_count(Lmotor);
-    Rdeg = nxt_motor_get_count(Rmotor);
+    Ldeg = nxt_motor_get_count(Lmotor) % 360;
+    Rdeg = nxt_motor_get_count(Rmotor) % 360;
     cur_err = Ldeg - Rdeg　- RATIO;  // 角度の差 OR角度の比率(?)
     //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
     integral = integral + cur_err;
     derivative = cur_err - prev_err;
     turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(Lmotor, POW, 1); // -spd_limit(turn)?
+    motor_set_speed(Lmotor, POW - spd_limit(turn), 1);
     motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
     prev_err = cur_err;
 
@@ -141,25 +151,37 @@ void mov_func(const int POW, int RATIO, const int DEG)
     display_string("Lmotor:"); display_int(Ldeg, 4);
     display_goto_xy(1, 3);
     display_string("Rmotor:"); display_int(Rdeg, 4);
-  } while(Ldeg != DEG);
-  set_flg(Fsens, DIS);
+    display_update();
+    if(POW < 0 && Ldeg <= DEG) break;
+    else if(POW > 0 && Ldeg >= DEG) break;
+  } while(1);
+  //set_flg(Fsens, DIS);
+  motor_set_speed(Lmotor, 0, 1);
+  motor_set_speed(Rmotor, 0, 1);
 }
 
-void arm_func(const int POW, const int DEG)
+void arm_func(int POW, const int DEG)
 {
   // TODO: 上げ下げのオプション
-  // 正：下，負：上
+  // DEG: 正-下, 負-上
+  int Adeg;
   nxt_motor_set_count(Amotor, 0);
-  while(nxt_motor_get_count(Amotor) != DEG){ // <= OR >= (?)
-    wai_sem(Stskc);
+  if(DEG < 0) POW = -2*POW;
+  while(1){
+    wai_sem(Stskc); //dly_tsk()?
+    Adeg = nxt_motor_get_count(Amotor);
+    if(DEG < 0 && Adeg <= DEG) break;
+    else if(DEG > 0 && Adeg >= DEG) break;
     motor_set_speed(Amotor, POW, 1);
 
     // アーム角度表示
     display_goto_xy(1, 1);
     display_string("Arm:");
     display_int(nxt_motor_get_count(Amotor), 4);
+    display_update();
   }
-  set_flg(Fsens, POS);
+  //set_flg(Fsens, POS);
+  motor_set_speed(Amotor, 0, 1);
 }
 
 /*----------- メニュー -----------*/
@@ -221,11 +243,12 @@ void calibration(void)
 {
   act_tsk(Tmotr);
   // TO TEST
-  arm_func(10, -30); // アームを上げる
-  arm_func(10, 30); // アームを下げる
-  mov_func(30, 0, 3600); // 直進
-  mov_func(30, 20, 720); //　右曲がり
-  mov_func(30, -20, 720); // 左曲がり
+  // arm_func(10, 30); // アームを下げる
+  // arm_func(10, -30); // アームを上げる
+  // mov_func(-40, 0, -700); // 直進
+  // mov_func(40, 0, 700); // バック
+  //  mov_func(-40, 20, -3000); //　左曲がり
+  // mov_func(-40, -20, -3000); // 右曲がり
 }
 
 /*----------- アルゴリズム群 -----------*/
@@ -394,12 +417,17 @@ void MoveTsk(VP_INT exinf)
   FLGPTN MtrSens;
 
   for(;;){
-    wai_flg(Fsens, DIS, TWF_CLR, &MtrSens);
+    /*wai_flg(Fsens, DIS, TWF_ORW, &MtrSens);
+    switch(MtrSens){
+    case(DIS):
+      motor_set_speed(Lmotor, 0, 1);
+      motor_set_speed(Rmotor, 0, 1);
+    }
     if(MtrSens == DIS){
       motor_set_speed(Lmotor, 0, 1);
-      motor_set_speed(Rmotor, 0, 1)
+      motor_set_speed(Rmotor, 0, 1);
     }
-    clr_flg(Fsens, ~DIS);
+    clr_flg(Fsens, ~DIS);*/
   }
 }
 
@@ -408,13 +436,13 @@ void MotrTsk(VP_INT exinf)
   FLGPTN ArmSens; // twai_flg() OR ref_flg()?
 
   for(;;){
-    wai_flg(Fsens, POS, TWF_CLR, &ArmSens); // TWF_ORW | TWF_CLR
+    /*wai_flg(Fsens, POS, TWF_ANDW, &ArmSens); // TWF_ORW | TWF_CLR
     if(ArmSens == POS) motor_set_speed(Amotor, 0, 1);
     //else continue;?
     /* switch(ArmSens){
       case POS: motor_set_speed(Amotor, 0, 1); break;
-    } */
-    clr_flg(Fsens, ~POS);
+    } /
+    clr_flg(Fsens, ~POS);*/
   }
 }
 
@@ -431,7 +459,8 @@ void TimrTsk(VP_INT exinf)
 
 void DispTsk(VP_INT exinf)
 {
-  T_RFLG sens;
+  //T_RFLG sens;
+  FLGPTN sens;
 
   display_clear(0);
 
@@ -441,10 +470,10 @@ void DispTsk(VP_INT exinf)
 
   /* Footer */
   display_goto_xy(0, 7);
-  ref_flg(Fsens, &sens);
-  //wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
-  //               MAG | YEL | WHT | RTP | LTP |
-  //               RTR | LTR | POS | DIS, TWF_ORW, &sens);
+  //ref_flg(Fsens, &sens);
+  wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
+                 MAG | YEL | WHT | RTP | LTP |
+                 RTR | LTR | POS | DIS, TWF_ORW, &sens);
 
   switch(sens){
     // カラー表示
@@ -458,7 +487,7 @@ void DispTsk(VP_INT exinf)
     case WHT: display_string("W"); break;
 
     // タッチ表示
-    case LTP & LTR:
+    /*case LTP & LTR:
       display_goto_xy(1, 7); display_string("[");
       break;
     case RTP & RTR:
@@ -466,7 +495,7 @@ void DispTsk(VP_INT exinf)
       break;
     case (LTP & LTR) | (RTP & RTR):
       display_goto_xy(1, 7); display_string("[]");
-      break;
+      break;*/
 
     // モーターとアーム
     case POS:
@@ -489,7 +518,10 @@ void MuscTsk(VP_INT exinf)
   FLGPTN ColSens;
 
   for (;;) {
-    ref_flg(Fsens, &sens);
+    //ref_flg(Fsens, &ColSens);
+    wai_flg(Fsens, BLK | BLU | GRN | CYA | RED |
+               MAG | YEL | WHT | RTP | LTP |
+      RTR | LTR | POS | DIS, TWF_ORW, &ColSens);
 
     // 色ごとに音が変わる(C4からC5まで)
     switch(ColSens){
