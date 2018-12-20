@@ -252,6 +252,7 @@ void collect_all(void) {algorithm = alg_collect_all;}
 void alg_collect_all(void)
 {
   //arm_func(30, 10);
+  //if () set_flg(Fsens, DIS);
 }
 
 /*----------- タスク群 -----------*/
@@ -263,7 +264,6 @@ void SensTsk(VP_INT exinf)
 
 	for (;;) {
 		dly_tsk(5);
-    //wai_sem(Stskc); , sig_sem(Stskc);
 
     // カラーセンサー
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
@@ -285,16 +285,28 @@ void SensTsk(VP_INT exinf)
     }
 
     // タッチセンサー
-    if (ecrobot_get_touch_sensor(Rtouch)) {
+		if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
 		} else {
-      set_flg(Fsens, RTR);
+      clr_flg(Fsens, ~RTP);
     }
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
 		} else {
-      set_flg(Fsens, LTR);
+      clr_flg(Fsens, ~LTP);
     }
+
+    if (!RTP) {
+			set_flg(Fsens, RTR);
+		} else {
+      clr_flg(Fsens, ~RTR);
+    }
+		if (!LTP) {
+			set_flg(Fsens, LTR);
+		} else {
+      clr_flg(Fsens, ~LTR);
+    }
+	}
 }
 
 void NbtnTsk(VP_INT exinf)
@@ -388,19 +400,25 @@ void MainTsk(VP_INT exinf)
   act_tsk(Ttimr);
   act_tsk(Tmusc);
 
-  sta_cyc(Cmove);
-  sta_cyc(Cdisp);
   //(*algorithm)();
+  sta_cyc(Cdisp); // Before (*algorithm)()?
 }
 
 void MoveTsk(VP_INT exinf)
 {
-  //sta_cyc(Cmove);
+  sta_cyc(Cmove);
+  //if (RTP)
+}
+
+void arm_func(const int deg, const int pow){
+  clr_flg(Fsens, ~POS);
+  Adeg = deg;
+  Apow = pow;
 }
 
 void MotrTsk(VP_INT exinf)
 {
-  /*FLGPTN ArmSens;
+  FLGPTN ArmSens;
 
   //nxt_motor_set_count(Amotor, 0);
   //clr_flg(Fsens, ~POS);
@@ -425,7 +443,7 @@ void MotrTsk(VP_INT exinf)
       motor_set_speed(Amotor, 0, 1);
       set_flg(Fsens, POS);
     }
-  } while(!POS);*/*/
+  } while(!POS);*/
 }
 
 void TimrTsk(VP_INT exinf)
@@ -448,11 +466,6 @@ void DispTsk(VP_INT exinf)
   /* Header */
   display_goto_xy(0, 0);
   display_string(name);
-
-  /* Message */
-  display_goto_xy(1, 1);
-  display_string("Arm:");
-  display_int(nxt_motor_get_count(Amotor), 4);
 
   /* Footer */
   display_goto_xy(0, 7);
@@ -507,7 +520,7 @@ void MuscTsk(VP_INT exinf)
   FLGPTN ColSens;
   // 延々と大学歌を奏で続ける
   for (;;) {
-    /*wai_flg(Fsens,
+    wai_flg(Fsens,
       BLK | BLU | GRN | CYA |
       RED | MAG | YEL | WHT, TWF_ORW, &ColSens);
 
@@ -522,9 +535,9 @@ void MuscTsk(VP_INT exinf)
       case YEL: ecrobot_sound_tone(494, 100, 60); break;
       case WHT: //ecrobot_sound_tone(523, 100, 60);
         break;
-    }*/
+    }
 
-    play_notes(TIMING_chiba_univ, 8, chiba_univ);
+    //play_notes(TIMING_chiba_univ, 8, chiba_univ);
     // TODO: 状態ごとに音変わる ()
   }
 }
