@@ -285,26 +285,15 @@ void SensTsk(VP_INT exinf)
     }
 
     // タッチセンサー
-		if (ecrobot_get_touch_sensor(Rtouch)) {
+    if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
 		} else {
-      clr_flg(Fsens, ~RTP);
+      set_flg(Fsens, RTR);
     }
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
 		} else {
-      clr_flg(Fsens, ~LTP);
-    }
-
-    if (!RTP) {
-			set_flg(Fsens, RTR);
-		} else {
-      clr_flg(Fsens, ~RTR);
-    }
-		if (!LTP) {
-			set_flg(Fsens, LTR);
-		} else {
-      clr_flg(Fsens, ~LTR);
+      set_flg(Fsens, LTR);
     }
 	}
 }
@@ -406,44 +395,36 @@ void MainTsk(VP_INT exinf)
 
 void MoveTsk(VP_INT exinf)
 {
-  sta_cyc(Cmove);
-  //if (RTP)
-}
+  /*FLGPTN MtrSens;
 
-void arm_func(const int deg, const int pow){
-  clr_flg(Fsens, ~POS);
-  Adeg = deg;
-  Apow = pow;
+  for(;;){
+    /*wai_flg(Fsens, DIS, TWF_ORW, &MtrSens);
+    switch(MtrSens){
+    case(DIS):
+      motor_set_speed(Lmotor, 0, 1);
+      motor_set_speed(Rmotor, 0, 1);
+    }
+    if(MtrSens == DIS){
+      motor_set_speed(Lmotor, 0, 1);
+      motor_set_speed(Rmotor, 0, 1);
+    }
+    clr_flg(Fsens, ~DIS);*/
+  }*/
 }
 
 void MotrTsk(VP_INT exinf)
 {
-  FLGPTN ArmSens;
+  /*FLGPTN ArmSens; // twai_flg() OR ref_flg()?
 
-  //nxt_motor_set_count(Amotor, 0);
-  //clr_flg(Fsens, ~POS);
-  // 無限ループ?
   for(;;){
-    wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
-    if(POS) motor_set_speed(Amotor, 0, 1);
-    else motor_set_speed(Amotor, Apow, 1);
-    if(nxt_motor_get_count() == Adeg)
-      set_flg(Fsens, POS);
-
-    // アーム角度表示
-    display_goto_xy(1, 3);
-    display_string("Arm Degree:");
-    display_int(nxt_motor_get_count);
-  }
-  /*do{
-    wai_flg(Fsens, POS, TWF_ORW, &ArmSens);
-    motor_set_speed(Amotor, Apow, 1);
-    if (nxt_motor_get_count(Amotor) == Adeg){
-      // Can motor degree be minus?
-      motor_set_speed(Amotor, 0, 1);
-      set_flg(Fsens, POS);
-    }
-  } while(!POS);*/
+    /*wai_flg(Fsens, POS, TWF_ANDW, &ArmSens); // TWF_ORW | TWF_CLR
+    if(ArmSens == POS) motor_set_speed(Amotor, 0, 1);
+    //else continue;?
+    /* switch(ArmSens){
+      case POS: motor_set_speed(Amotor, 0, 1); break;
+    } /
+    clr_flg(Fsens, ~POS);/
+  }*/
 }
 
 void TimrTsk(VP_INT exinf)
@@ -466,6 +447,11 @@ void DispTsk(VP_INT exinf)
   /* Header */
   display_goto_xy(0, 0);
   display_string(name);
+
+  /* Message */
+  display_goto_xy(1, 1);
+  display_string("Arm:");
+  display_int(nxt_motor_get_count(Amotor), 4);
 
   /* Footer */
   display_goto_xy(0, 7);
@@ -520,7 +506,7 @@ void MuscTsk(VP_INT exinf)
   FLGPTN ColSens;
   // 延々と大学歌を奏で続ける
   for (;;) {
-    wai_flg(Fsens,
+    /*wai_flg(Fsens,
       BLK | BLU | GRN | CYA |
       RED | MAG | YEL | WHT, TWF_ORW, &ColSens);
 
@@ -535,9 +521,9 @@ void MuscTsk(VP_INT exinf)
       case YEL: ecrobot_sound_tone(494, 100, 60); break;
       case WHT: //ecrobot_sound_tone(523, 100, 60);
         break;
-    }
+    }*/
 
-    //play_notes(TIMING_chiba_univ, 8, chiba_univ);
+    play_notes(TIMING_chiba_univ, 8, chiba_univ);
     // TODO: 状態ごとに音変わる ()
   }
 }
