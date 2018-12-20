@@ -1,13 +1,13 @@
 /*
  *	TOPPERS/JSPを用いたライントレーサーのサンプルコード
  */
-
-/*
-  TODO:
-    MotrTsk(), MoveTsk(), movelength(), calibration(), collect_all()
-  EXP:
-    Sound, Motor, Arm, Collect All
-*/
+ //みはる，wait_for
+ /*
+   TODO:
+     calibration(), collect_all(), reverse(),
+   EXP:
+     Motor, Arm, Display, Sound, Collect All
+ */
 #include "display.h"	// 変更したバージョンを使うために先頭でinclude
 
 #include "kernel_id.h"
@@ -50,6 +50,11 @@ typedef enum {
   // 以下ライトセンサー?
 } EBits;
 
+typedef struct t_rflg{
+  ID wtskid;
+  FLGPTN flgptn;
+} T_RFLG;
+
 typedef enum {
   Obtn = 1 << 0,
   Lbtn = 1 << 1,
@@ -68,8 +73,6 @@ void alg_collect_all(void);
 /* 外部変数の定義 */
 char name[17];
 void (*algorithm)(void) = alg_collect_all;
-int Adeg = 0; // アームモーターの目的角度
-int Apow = 0; // アームの上下パワー
 
 /*----------- 雑多な関数群 -----------*/
 void wait_for_release(void)
@@ -78,12 +81,6 @@ void wait_for_release(void)
     dly_tsk(7);
     ecrobot_poll_nxtstate();
   }
-}
-
-U8 bin(const int val, const int div, const int n)
-{
-  if(val > div) return 1 << n;
-  return 0 << n;
 }
 
 U8 get_btn(void)
@@ -102,10 +99,88 @@ U8 get_btn(void)
   return btn;
 }
 
-void move_func(const int POW, const int RATIO, const int TIME){
-
+U8 bin(const int val, const int div, const int n)
+{
+  if(val > div) return 1 << n;
+  return 0 << n;
+}
+/*
+int spd_limit(const int val)
+{
+  if(val > 20) return 20;
+  else if(val < -20) return -20;
+  else return val;
 }
 
+void mov_func(const int POW, const int RATIO, int DEG)
+{
+  // TODO: バックしながら曲がる
+  // RATIO: 正-左, 負-右, 0-直進
+  // POW: 正-バック, 負-進む
+  int Ldeg, Rdeg, turn;
+  int cur_err, prev_err, integral, derivative;
+  double kp = 100.0;
+  double ki = 25;
+  double kd = 0;
+
+  nxt_motor_set_count(Lmotor, 0);
+  nxt_motor_set_count(Rmotor, 0);
+  prev_err = integral = derivative = 0;
+  if (POW < 0) DEG *= -1;
+
+  do{
+    wai_sem(Stskc);
+
+    // PID制御
+    Ldeg = nxt_motor_get_count(Lmotor) % 360;
+    Rdeg = nxt_motor_get_count(Rmotor) % 360;
+    cur_err = Ldeg - Rdeg - RATIO;  // 角度の差 OR角度の比率(?)
+    //cur_err = Ldeg*RATIO - Rdeg*(1.0-RATIO);  // double, 0の時0にならないよう
+    integral = integral + cur_err;
+    derivative = cur_err - prev_err;
+    turn = kp * cur_err + ki * integral + kd * derivative;
+    motor_set_speed(Lmotor, POW - spd_limit(turn), 1);
+    motor_set_speed(Rmotor, POW + spd_limit(turn), 1);
+    prev_err = cur_err;
+
+    // モーター角度表示
+    display_goto_xy(1, 2);
+    display_string("Lmotor:"); display_int(Ldeg, 4);
+    display_goto_xy(1, 3);
+    display_string("Rmotor:"); display_int(Rdeg, 4);
+    display_update();
+    if(POW < 0 && Ldeg <= DEG) break;
+    else if(POW > 0 && Ldeg >= DEG) break;
+  } while(1);
+  //set_flg(Fsens, DIS);
+  motor_set_speed(Lmotor, 0, 1);
+  motor_set_speed(Rmotor, 0, 1);
+}
+
+void arm_func(int POW, const int DEG)
+{
+  // TODO: 上げ下げのオプション
+  // DEG: 正-下, 負-上
+  int Adeg;
+  nxt_motor_set_count(Amotor, 0);
+  if(DEG < 0) POW = -2*POW;
+  while(1){
+    wai_sem(Stskc); //dly_tsk()?
+    Adeg = nxt_motor_get_count(Amotor);
+    if(DEG < 0 && Adeg <= DEG) break;
+    else if(DEG > 0 && Adeg >= DEG) break;
+    motor_set_speed(Amotor, POW, 1);
+
+    // アーム角度表示
+    display_goto_xy(1, 1);
+    display_string("Arm:");
+    display_int(nxt_motor_get_count(Amotor), 4);
+    display_update();
+  }
+  //set_flg(Fsens, POS);
+  motor_set_speed(Amotor, 0, 1);
+}
+*/
 /*----------- メニュー -----------*/
 NameFunc MainMenu[] = {
   {"Main Menu", NULL},
@@ -162,7 +237,14 @@ void func_menu(NameFunc *tbl, int cnt)
 void calibrate(void) {algorithm = calibration;}
 void calibration(void)
 {
-  iact_tsk(Tmotr);
+  act_tsk(Tmotr);
+  // TO TEST
+  // arm_func(10, 30); // アームを下げる
+  // arm_func(10, -30); // アームを上げる
+  // mov_func(-40, 0, -700); // 直進
+  // mov_func(40, 0, 700); // バック
+  //  mov_func(-40, 20, -3000); //　左曲がり
+  // mov_func(-40, -20, -3000); // 右曲がり
 }
 
 /*----------- アルゴリズム群 -----------*/
@@ -170,7 +252,6 @@ void collect_all(void) {algorithm = alg_collect_all;}
 void alg_collect_all(void)
 {
   //arm_func(30, 10);
-  //if () set_flg(Fsens, DIS);
 }
 
 /*----------- タスク群 -----------*/
@@ -182,6 +263,7 @@ void SensTsk(VP_INT exinf)
 
 	for (;;) {
 		dly_tsk(5);
+    //wai_sem(Stskc); , sig_sem(Stskc);
 
     // カラーセンサー
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
@@ -203,28 +285,16 @@ void SensTsk(VP_INT exinf)
     }
 
     // タッチセンサー
-		if (ecrobot_get_touch_sensor(Rtouch)) {
+    if (ecrobot_get_touch_sensor(Rtouch)) {
 			set_flg(Fsens, RTP);
 		} else {
-      clr_flg(Fsens, ~RTP);
+      set_flg(Fsens, RTR);
     }
 		if (ecrobot_get_touch_sensor(Ltouch)) {
 			set_flg(Fsens, LTP);
 		} else {
-      clr_flg(Fsens, ~LTP);
+      set_flg(Fsens, LTR);
     }
-
-    if (!RTP) {
-			set_flg(Fsens, RTR);
-		} else {
-      clr_flg(Fsens, ~RTR);
-    }
-		if (!LTP) {
-			set_flg(Fsens, LTR);
-		} else {
-      clr_flg(Fsens, ~LTR);
-    }
-	}
 }
 
 void NbtnTsk(VP_INT exinf)
@@ -318,25 +388,19 @@ void MainTsk(VP_INT exinf)
   act_tsk(Ttimr);
   act_tsk(Tmusc);
 
+  sta_cyc(Cmove);
+  sta_cyc(Cdisp);
   //(*algorithm)();
-  sta_cyc(Cdisp); // Before (*algorithm)()?
 }
 
 void MoveTsk(VP_INT exinf)
 {
-  sta_cyc(Cmove);
-  //if (RTP)
-}
-
-void arm_func(const int deg, const int pow){
-  clr_flg(Fsens, ~POS);
-  Adeg = deg;
-  Apow = pow;
+  //sta_cyc(Cmove);
 }
 
 void MotrTsk(VP_INT exinf)
 {
-  FLGPTN ArmSens;
+  /*FLGPTN ArmSens;
 
   //nxt_motor_set_count(Amotor, 0);
   //clr_flg(Fsens, ~POS);
@@ -361,7 +425,7 @@ void MotrTsk(VP_INT exinf)
       motor_set_speed(Amotor, 0, 1);
       set_flg(Fsens, POS);
     }
-  } while(!POS);*/
+  } while(!POS);*/*/
 }
 
 void TimrTsk(VP_INT exinf)
@@ -384,6 +448,11 @@ void DispTsk(VP_INT exinf)
   /* Header */
   display_goto_xy(0, 0);
   display_string(name);
+
+  /* Message */
+  display_goto_xy(1, 1);
+  display_string("Arm:");
+  display_int(nxt_motor_get_count(Amotor), 4);
 
   /* Footer */
   display_goto_xy(0, 7);
@@ -438,7 +507,7 @@ void MuscTsk(VP_INT exinf)
   FLGPTN ColSens;
   // 延々と大学歌を奏で続ける
   for (;;) {
-    wai_flg(Fsens,
+    /*wai_flg(Fsens,
       BLK | BLU | GRN | CYA |
       RED | MAG | YEL | WHT, TWF_ORW, &ColSens);
 
@@ -453,9 +522,9 @@ void MuscTsk(VP_INT exinf)
       case YEL: ecrobot_sound_tone(494, 100, 60); break;
       case WHT: //ecrobot_sound_tone(523, 100, 60);
         break;
-    }
+    }*/
 
-    //play_notes(TIMING_chiba_univ, 8, chiba_univ);
+    play_notes(TIMING_chiba_univ, 8, chiba_univ);
     // TODO: 状態ごとに音変わる ()
   }
 }
