@@ -311,15 +311,15 @@ void Steering(int direction, int angle)
   if (direction == 1)
   {
     nxt_motor_set_speed(Rmotor, 0, 1);
-    nxt_motor_set_speed(Lmotor, 50, 0);
+    nxt_motor_set_speed(Lmotor, 75, 0);
   }
   else
   {
     nxt_motor_set_speed(Lmotor, 0, 1);
-    nxt_motor_set_speed(Rmotor, 50, 0);
+    nxt_motor_set_speed(Rmotor, 75, 0);
   }
 
-  while (masterMotorCount > angle)
+  while (masterMotorCount < angle)
   {
     RmotorCount = nxt_motor_get_count(Rmotor);
     LmotorCount = nxt_motor_get_count(Lmotor);
@@ -348,7 +348,7 @@ void alg_collect_BlueStart()
   /*------------------------------青エリアスタートver------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(-1, 360 * 3);
+  Steering(-1, 360 * 5);
   arm_func(20, -30);
   mov_func(-50, 20, -1500);
   mov_func(50, 0, 100);
@@ -356,37 +356,32 @@ void alg_collect_BlueStart()
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(-1, 360 * 2);
+  Steering(-1, 360 * 4);
   mov_func(-50, 0, -1250);
 
   // 3個目
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 3);
+  Steering(-1, 360 * 5);
   mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
   mov_func(-50, -50, -250);
-  Steering(1, 360 * 4);
+  Steering(1, 360 * 6);
   mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
   mov_func(-50, -50, -750);
-  Steering(1, 360 * 5);
+  Steering(1, 360 * 7);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
   arm_func(20, -30);
   mov_func(-50, 0, -100);
-  arm_func(20, 30);
-  // 揺らす?
   mov_func(50, 0, 100);
-  mov_func(-50, 0, -100);
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 3);
+  Steering(-1, 360 * 5);
   mov_func(-50, 0, -1000);
 }
 void collect_GreenStart()
@@ -398,7 +393,7 @@ void alg_collect_GreenStart()
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(1, 360 * 3);
+  Steering(1, 360 * 5);
   arm_func(20, -30);
   mov_func(-50, -20, -1500);
   mov_func(50, 0, 100);
@@ -406,37 +401,38 @@ void alg_collect_GreenStart()
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(1, 360 * 2);
+  Steering(1, 360 * 4);
   mov_func(-50, 0, -1250);
 
   // 3個目
   mov_func(50, 0, 500);
-  Steering(1, 360 * 3);
+  Steering(1, 360 * 5);
   mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
   mov_func(-50, 50, -250);
-  Steering(-1, 360 * 4);
+  Steering(-1, 360 * 6);
   mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
   mov_func(-50, -50, -750);
-  Steering(1, 360 * 5);
+  Steering(1, 360 * 7);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
   arm_func(20, -30);
   mov_func(-50, 0, -100);
-  arm_func(20, 30);
-  // 揺らす?
   mov_func(50, 0, 100);
-  mov_func(-50, 0, -100);
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
+  // arm_func(20, 30);
+  // // 揺らす?
+  // mov_func(50, 0, 100);
+  // mov_func(-50, 0, -100);
+  // mov_func(50, 0, 100);
+  // arm_func(20, -30);
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(1, 360 * 3);
+  Steering(1, 360 * 5);
   mov_func(-50, 0, -1000);
 }
 
@@ -455,16 +451,11 @@ void alg_collect_Bluefinish()
   mov_func(50, 0, 100);
   arm_func(20, -30);
   mov_func(-50, 0, -100);
-  arm_func(20, 30);
-  // 揺らす?
   mov_func(50, 0, 100);
-  mov_func(-50, 0, -100);
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(1, 360 * 3);
+  Steering(1, 360 * 5);
   mov_func(-50, 0, -1000);
 }
 
@@ -480,16 +471,11 @@ void alg_collect_GreenFinish()
   mov_func(50, 0, 100);
   arm_func(20, -30);
   mov_func(-50, 0, -100);
-  arm_func(20, 30);
-  // 揺らす?
   mov_func(50, 0, 100);
-  mov_func(-50, 0, -100);
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 3);
+  Steering(-1, 360 * 5);
   mov_func(-50, 0, -1000);
 }
 
