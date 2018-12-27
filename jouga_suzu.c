@@ -296,7 +296,7 @@ void alg_collect_blue_ball()
   act_tsk(Tmotr);
 }
 
-void Steering(int direction, int angle)
+void Steering(int direction, float angle)
 {
   // direction (-1 : 左 | 1 : 右)
   // angle (ステアリング角度の絶対値)
@@ -346,42 +346,33 @@ void collect_BlueStart()
 void alg_collect_BlueStart()
 {
   /*------------------------------青エリアスタートver------------------------------*/
-  // 1個目
-  mov_func(-50, 0, -2000);
-  Steering(-1, 360 * 5);
+  // 1個目(青→ピンク)
   arm_func(20, -30);
-  mov_func(-50, 20, -1500);
-  mov_func(50, 0, 100);
+  mov_func(-50, 50, -1000);
+  mov_func(50, 0, 50);
   arm_func(20, 30);
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(-1, 360 * 4);
-  mov_func(-50, 0, -1250);
+  Steering(1, 360 * 0.75f);
+  mov_func(-50, -20, -1000);
 
   // 3個目
-  mov_func(50, 0, 500);
-  Steering(-1, 360 * 5);
-  mov_func(-50, 0, -2500);
-  mov_func(50, 0, 500);
-  mov_func(-50, -50, -250);
-  Steering(1, 360 * 6);
-  mov_func(-50, 0, -1500);
+  mov_func(50, 0, 640);
+  Steering(1, 360 * 1.5f);
+  mov_func(-50, 50, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
-  mov_func(-50, -50, -750);
-  Steering(1, 360 * 7);
+  Steering(-1, 360 * 3f);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
-  mov_func(50, 0, 100);
+  mov_func(50, 0, 50);
   arm_func(20, -30);
-  mov_func(-50, 0, -100);
-  mov_func(50, 0, 100);
-
+  mov_func(-50, 0, -50);
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 5);
+  Steering(1, 360 * 2.25f);
   mov_func(-50, 0, -1500);
 }
 void collect_GreenStart()
@@ -393,7 +384,7 @@ void alg_collect_GreenStart()
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(1, 360 * 5);
+  Steering(1, 360 * 1.5);
   arm_func(20, -30);
   mov_func(-50, -20, -1500);
   mov_func(50, 0, 100);
