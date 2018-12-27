@@ -2,5 +2,5 @@
 /nxtOSEK
 .DS_Store
 
-#リファレンス用に入れたmap画像をignore
+#リファレンス用に入れた物集めのmap画像をignore
 /public
