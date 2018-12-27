@@ -67,10 +67,11 @@ void ecrobot_poll_nxtstate(void);
 void calibrate(void);
 void collect_all(void);
 void collect_red_ball(void);
+void collect_finish(void);
 void calibration(void);
 void alg_collect_all(void);
 void alg_collect_red_ball(void);
-
+void alg_collect_finish(void);
 /* 外部変数の定義 */
 char name[17];
 void (*algorithm)(void) = calibration;
@@ -202,6 +203,7 @@ NameFunc MainMenu[] = {
     {"Calibration", calibrate},
     {"Collect All", collect_all},
     {"Collect Red Ball", collect_red_ball},
+    {"Collect Finish", collect_finish},
     {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
                                    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -323,28 +325,43 @@ void Steering(int direction, int angle)
   nxt_motor_set_speed(Rmotor, 0, 1);
   nxt_motor_set_speed(Lmotor, 0, 1);
 }
-void calibrate(void) { algorithm = calibration; }
-void calibration(void)
+
+// オブジェクトを持った状態で自陣地に機体がある時に押せば斜め奥のエリアにオブジェクトを置くアルゴリズム
+void collect_finish()
+{
+  algorithm = collect_finish;
+}
+void collect_finish()
 {
 
-  /* -------------------緑エリアから真ん中のタイヤを取得してピンクエリアへ運ぶコード(ピンクエリアの青ボールも取得)----------------------------*/
-  /*
-  // アーム上げる
+  /*-----------------緑エリアスタートver------------*/
+  mov_func(-50, -20, 3000);
+  // アームを上げるために少し下がる
+  mov_func(50, 0, 100);
   arm_func(20, -30);
-  mov_func(-50, 0, -1800);
-  // アーム下げる
-  arm_func(20, 30);
-  //右寄りに進む
-  mov_func(-50, -20, -2400);
-  mov_func(50, 0, 180);
-  arm_func(20, -50);
-  mov_func(50, 0, 1000);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 0, -2200);
-*/
-  /* -----------------------------------------------------------------*/
+  mov_func(50, 0, 700);
+  mov_func(-50, 50, 500);
+  mov_func(-50, 50, 500);
+  mov_func(-50, 50, 500);
+  mov_func(-50, 0, 3000);
+
+  /*---------------青エリアスタートver---------------*/
+  mov_func(-50, 20, 3000);
+  // アームを上げるために少し下がる
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(50, 0, 700);
+  mov_func(-50, -50, 500);
+  mov_func(-50, -50, 500);
+  mov_func(-50, -50, 500);
+  mov_func(-50, 0, 3000);
+}
+void calibrate(void)
+{
+  algorithm = calibration;
+}
+void calibration(void)
+{
 
   // 1個目
   mov_func(-50, 0, 100);
@@ -387,7 +404,7 @@ void calibration(void)
   // 帰宅
   mov_func(50, 0, 500);
   Steering(-1, 360 * 3);
-  mov_func-50, 0, 1000);
+  mov_func(-50, 0, 1000);
 
   // ピンクエリアに設置
   //arm_func(30, -60);
@@ -410,16 +427,41 @@ void calibration(void)
   //arm_func(10, -30); // アームを下げる
   // arm_func(20, 30); // アームを上げる
   // mov_func(100, 0, 1000);
+
+  /* -------------------緑エリアから真ん中のタイヤを取得してピンクエリアへ運ぶコード(ピンクエリアの青ボールも取得)----------------------------*/
+  /*
+  // アーム上げる
+  arm_func(20, -30);
+  mov_func(-50, 0, -1800);
+  // アーム下げる
+  arm_func(20, 30);
+  //右寄りに進む
+  mov_func(-50, -20, -2400);
+  mov_func(50, 0, 180);
+  arm_func(20, -50);
+  mov_func(50, 0, 1000);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 360, -500);
+  mov_func(-50, 0, -2200);
+*/
+  /* -----------------------------------------------------------------*/
 }
 
 /*----------- アルゴリズム群 -----------*/
-void collect_all(void) { algorithm = alg_collect_all; }
+void collect_all(void)
+{
+  algorithm = alg_collect_all;
+}
 void alg_collect_all(void)
 {
   //arm_func(10, 30);
 }
 
-void collect_red_ball(void) { algorithm = alg_collect_red_ball; }
+void collect_red_ball(void)
+{
+  algorithm = alg_collect_red_ball;
+}
 void alg_collect_red_ball(void)
 {
 }

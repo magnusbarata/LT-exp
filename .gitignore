@@ -1,3 +1,6 @@
 #リファレンス用に入れたAPIたちをignore
 /nxtOSEK
 .DS_Store
+
+#リファレンス用に入れたmap画像をignore
+/public
