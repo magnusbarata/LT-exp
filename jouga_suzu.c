@@ -79,7 +79,7 @@ void collect_GreenFinish();
 
 void alg_collect_BlueStart();
 void alg_collect_GreenStart();
-void alg_collect_Bluefinish();
+void alg_collect_BlueFinish();
 void alg_collect_GreenFinish();
 
 /* 外部変数の定義 */
@@ -440,9 +440,9 @@ void alg_collect_GreenStart()
 // オブジェクトを持った状態で自陣地に機体がある時に押せば斜め奥のエリアにオブジェクトを置くアルゴリズム
 void collect_BlueFinish()
 {
-  algorithm = alg_collect_Bluefinish;
+  algorithm = alg_collect_BlueFinish;
 }
-void alg_collect_Bluefinish()
+void alg_collect_BlueFinish()
 {
 
   /*---------------青エリアFinishVer---------------*/
