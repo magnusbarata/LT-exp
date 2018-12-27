@@ -50,11 +50,6 @@ typedef enum {
   // 以下ライトセンサー?
 } EBits;
 
-typedef struct t_rflg{
-  ID wtskid;
-  FLGPTN flgptn;
-} T_RFLG;
-
 typedef enum {
   Obtn = 1 << 0,
   Lbtn = 1 << 1,
@@ -237,7 +232,7 @@ void func_menu(NameFunc *tbl, int cnt)
 void calibrate(void) {algorithm = calibration;}
 void calibration(void)
 {
-  act_tsk(Tmotr);
+  //act_tsk(Tmotr);
   // TO TEST
   // arm_func(10, 30); // アームを下げる
   // arm_func(10, -30); // アームを上げる
@@ -263,7 +258,7 @@ void SensTsk(VP_INT exinf)
   U8 CBits = 0;
 
 	for (;;) {
-		dly_tsk(5);
+		dly_tsk(20);
 
     // カラーセンサー
     ecrobot_get_nxtcolorsensor_rgb(Color, col);
@@ -304,7 +299,7 @@ void NbtnTsk(VP_INT exinf)
 
   for (;;){
     btn = ecrobot_get_button_state();
-    dly_tsk(2);
+    dly_tsk(50);
     switch(btn){
       case Obtn: set_flg(Fnbtn, Obtn); break;
       case Lbtn: set_flg(Fnbtn, Lbtn); break;
@@ -343,14 +338,14 @@ void QuitTsk(VP_INT exinf)
       stp_cyc(Cmove);
       stp_cyc(Cdisp);
       ter_tsk(Tinit);
-      ter_tsk(Tsens);
-      ter_tsk(Tnbtn);
-      ter_tsk(Tmove);
+      //ter_tsk(Tsens);
+      //ter_tsk(Tnbtn);
+      //ter_tsk(Tmove);
       ter_tsk(Tmotr);
       ter_tsk(Ttimr);
       ter_tsk(Tmusc);
       ter_tsk(Tmain);
-      ter_tsk(Tdisp);
+      //ter_tsk(Tdisp);
       act_tsk(Tinit);
       ter_tsk(Tquit);
     }
@@ -389,27 +384,32 @@ void MainTsk(VP_INT exinf)
   act_tsk(Ttimr);
   act_tsk(Tmusc);
 
-  //(*algorithm)();
-  sta_cyc(Cdisp); // Before (*algorithm)()?
+  sta_cyc(Cdisp);
+  sta_cyc(Cmove);
+  act_tsk(Tmotr);
+  for(;;){
+    dly_tsk(100);
+    //(*algorithm)();  
+  }
 }
 
 void MoveTsk(VP_INT exinf)
 {
-  /*FLGPTN MtrSens;
+  FLGPTN MtrSens;
 
   for(;;){
-    /*wai_flg(Fsens, DIS, TWF_ORW, &MtrSens);
+    wai_flg(Fsens, DIS, TWF_ORW, &MtrSens);
     switch(MtrSens){
-    case(DIS):
+    /*case(DIS):
       motor_set_speed(Lmotor, 0, 1);
       motor_set_speed(Rmotor, 0, 1);
     }
     if(MtrSens == DIS){
       motor_set_speed(Lmotor, 0, 1);
       motor_set_speed(Rmotor, 0, 1);
-    }
-    clr_flg(Fsens, ~DIS);*/
-  }*/
+    */}
+    clr_flg(Fsens, ~DIS);
+  }
 }
 
 void MotrTsk(VP_INT exinf)
@@ -488,22 +488,19 @@ void DispTsk(VP_INT exinf)
     case DIS:
       display_goto_xy(2, 7); display_string("D");
       break;
-    /*case POS | RTP:
-      display_goto_xy(1, 7); display_string("[]");
-      break;*/
 
     default:
       display_goto_xy(1, 7); display_string("----");
       break;
   }
-
-
+  clr_flg(Fsens, ~(RTP)); //| RTR));
+  clr_flg(Fsens, ~(LTL)); //| LTR));
   display_update();
 }
 
 void MuscTsk(VP_INT exinf)
 {
-  FLGPTN ColSens;
+  //FLGPTN ColSens;
   // 延々と大学歌を奏で続ける
   for (;;) {
     /*wai_flg(Fsens,
