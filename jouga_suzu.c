@@ -67,11 +67,21 @@ void ecrobot_poll_nxtstate(void);
 void calibrate(void);
 void collect_all(void);
 void collect_red_ball(void);
-void collect_finish(void);
 void calibration(void);
 void alg_collect_all(void);
 void alg_collect_red_ball(void);
-void alg_collect_finish(void);
+
+/*------Suzu Algorithm---------------*/
+void collect_BlueStart();
+void collect_GreenStart();
+void collect_BlueFinish();
+void collect_GreenFinish();
+
+void alg_collect_BlueStart();
+void alg_collect_GreenStart();
+void alg_collect_Bluefinish();
+void alg_collect_GreenFinish();
+
 /* 外部変数の定義 */
 char name[17];
 void (*algorithm)(void) = calibration;
@@ -201,9 +211,10 @@ NameFunc MainMenu[] = {
     {"Main Menu", NULL},
     {"Start", NULL},
     {"Calibration", calibrate},
-    {"Collect All", collect_all},
-    {"Collect Red Ball", collect_red_ball},
-    {"Collect Finish", collect_finish},
+    {"Collect BlueStart", collect_BlueStart},
+    {"Collect GreenStart", collect_GreenStart},
+    {"Collect BlueFinish", collect_Bluefinish},
+    {"Collect GreenFinish", collect_GreenFinish},
     {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
                                    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -326,70 +337,42 @@ void Steering(int direction, int angle)
   nxt_motor_set_speed(Lmotor, 0, 1);
 }
 
-// オブジェクトを持った状態で自陣地に機体がある時に押せば斜め奥のエリアにオブジェクトを置くアルゴリズム
-void collect_finish()
-{
-  algorithm = collect_finish;
-}
-void collect_finish()
-{
+/*---------------------------Start関数群-------------------------*/
 
-  /*-----------------緑エリアスタートver------------*/
-  mov_func(-50, -20, 3000);
-  // アームを上げるために少し下がる
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
-  mov_func(50, 0, 700);
-  mov_func(-50, 50, 500);
-  mov_func(-50, 50, 500);
-  mov_func(-50, 50, 500);
-  mov_func(-50, 0, 3000);
-
-  /*---------------青エリアスタートver---------------*/
-  mov_func(-50, 20, 3000);
-  // アームを上げるために少し下がる
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
-  mov_func(50, 0, 700);
-  mov_func(-50, -50, 500);
-  mov_func(-50, -50, 500);
-  mov_func(-50, -50, 500);
-  mov_func(-50, 0, 3000);
-}
-void calibrate(void)
+void collect_BlueStart()
 {
-  algorithm = calibration;
+  algorithm = alg_collect_BlueStart;
 }
-void calibration(void)
+void alg_collect_BlueStart()
 {
-
+  /*------------------------------青エリアスタートver------------------------------*/
   // 1個目
-  mov_func(-50, 0, 100);
+  mov_func(-50, 0, -2000);
   Steering(-1, 360 * 3);
   arm_func(20, -30);
-  mov_func(-50, 20, 1000);
+  mov_func(-50, 20, -1500);
   mov_func(50, 0, 100);
   arm_func(20, 30);
 
   // 2個目
   mov_func(50, 0, 360);
   Steering(-1, 360 * 2);
-  mov_func(-50, 0, 1250);
+  mov_func(-50, 0, -1250);
 
   // 3個目
   mov_func(50, 0, 500);
   Steering(-1, 360 * 3);
-  mov_func(-50, 0, 2500);
+  mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
-  mov_func(-50, -50, 250);
+  mov_func(-50, -50, -250);
   Steering(1, 360 * 4);
-  mov_func(-50, 0, 750);
+  mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
-  mov_func(-50, -50, 750);
+  mov_func(-50, -50, -750);
   Steering(1, 360 * 5);
-  mov_func(-50, 0, 1500);
+  mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
   arm_func(20, -30);
@@ -397,14 +380,134 @@ void calibration(void)
   arm_func(20, 30);
   // 揺らす?
   mov_func(50, 0, 100);
-  mov_func(-50, 0, 100);
+  mov_func(-50, 0, -100);
   mov_func(50, 0, 100);
   arm_func(20, -30);
 
   // 帰宅
   mov_func(50, 0, 500);
   Steering(-1, 360 * 3);
-  mov_func(-50, 0, 1000);
+  mov_func(-50, 0, -1000);
+}
+void collect_GreenStart()
+{
+  algorithm = alg_collect_GreenStart;
+}
+void alg_collect_GreenStart()
+{
+  /*-----------------------------緑エリアスタートver-----------------------------------------*/
+  // 1個目
+  mov_func(-50, 0, -2000);
+  Steering(1, 360 * 3);
+  arm_func(20, -30);
+  mov_func(-50, -20, -1500);
+  mov_func(50, 0, 100);
+  arm_func(20, 30);
+
+  // 2個目
+  mov_func(50, 0, 360);
+  Steering(1, 360 * 2);
+  mov_func(-50, 0, -1250);
+
+  // 3個目
+  mov_func(50, 0, 500);
+  Steering(1, 360 * 3);
+  mov_func(-50, 0, -2500);
+  mov_func(50, 0, 500);
+  mov_func(-50, 50, -250);
+  Steering(-1, 360 * 4);
+  mov_func(-50, 0, -1500);
+
+  // 4個目
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, -750);
+  Steering(1, 360 * 5);
+  mov_func(-50, 0, -1500);
+  // 1歩下がってアーム上げ下げしてボール取得
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(-50, 0, -100);
+  arm_func(20, 30);
+  // 揺らす?
+  mov_func(50, 0, 100);
+  mov_func(-50, 0, -100);
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+
+  // 帰宅
+  mov_func(50, 0, 500);
+  Steering(1, 360 * 3);
+  mov_func(-50, 0, -1000);
+}
+
+/*---------------------------Finish関数群-------------------------*/
+// オブジェクトを持った状態で自陣地に機体がある時に押せば斜め奥のエリアにオブジェクトを置くアルゴリズム
+void collect_BlueFinish()
+{
+  algorithm = alg_collect_Bluefinish;
+}
+void alg_collect_Bluefinish()
+{
+
+  /*---------------青エリアFinishVer---------------*/
+  mov_func(-50, 20, 3000);
+  // 1歩下がってアーム上げ下げしてボール取得
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(-50, 0, -100);
+  arm_func(20, 30);
+  // 揺らす?
+  mov_func(50, 0, 100);
+  mov_func(-50, 0, -100);
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+
+  // 帰宅
+  mov_func(50, 0, 500);
+  Steering(1, 360 * 3);
+  mov_func(-50, 0, -1000);
+}
+
+void collect_GreenFinish()
+{
+  algorithm = alg_collect_GreenFinish;
+}
+void alg_collect_GreenFinish()
+{
+  /*-----------------緑エリアFinishVer------------*/
+  mov_func(-50, -20, 3000);
+  // 1歩下がってアーム上げ下げしてボール取得
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+  mov_func(-50, 0, -100);
+  arm_func(20, 30);
+  // 揺らす?
+  mov_func(50, 0, 100);
+  mov_func(-50, 0, -100);
+  mov_func(50, 0, 100);
+  arm_func(20, -30);
+
+  // 帰宅
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 3);
+  mov_func(-50, 0, -1000);
+}
+
+void calibrate(void)
+{
+  algorithm = calibration;
+}
+void calibration(void)
+{
+  /*Reference*/
+  /*
+右曲がり : mov_func(-50, -30, 100);
+左曲がり : mov_func(-50, 30, 100);
+アーム上げ : arm_func(20, -30);
+アーム下げ : arm_func(20, 30);
+左旋回 : Steering(-1, 360 * 3);
+右旋回 : Steering(1, 360 * 3);
+*/
 
   // ピンクエリアに設置
   //arm_func(30, -60);
