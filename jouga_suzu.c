@@ -213,7 +213,7 @@ NameFunc MainMenu[] = {
     {"Calibration", calibrate},
     {"Collect BlueStart", collect_BlueStart},
     {"Collect GreenStart", collect_GreenStart},
-    {"Collect BlueFinish", collect_Bluefinish},
+    {"Collect BlueFinish", collect_BlueFinish},
     {"Collect GreenFinish", collect_GreenFinish},
     {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
                                    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
