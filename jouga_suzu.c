@@ -277,6 +277,7 @@ void alg_collect_blue_ball()
 
   mov_func(-LOWPOWER, 0, -1500);
   arm_func(-LOWPOWER, 500);
+
   // アームを上げた状態で少し前進
   mov_func(LOWPOWER, 0, 360);
   // アームを下げる
@@ -295,7 +296,7 @@ void alg_collect_blue_ball()
   act_tsk(Tmotr);
 }
 
-void Steering(int direction, float angle)
+void Steering(int direction, int angle)
 {
   // direction (-1 : 左 | 1 : 右)
   // angle (ステアリング角度の絶対値)
@@ -345,33 +346,42 @@ void collect_BlueStart()
 void alg_collect_BlueStart()
 {
   /*------------------------------青エリアスタートver------------------------------*/
-  // 1個目(青→ピンク)
+  // 1個目
+  mov_func(-50, 0, -2000);
+  Steering(-1, 360 * 5);
   arm_func(20, -30);
-  mov_func(-50, 50, -1000);
-  mov_func(50, 0, 50);
+  mov_func(-50, 20, -1500);
+  mov_func(50, 0, 100);
   arm_func(20, 30);
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(1, 360 * 0.75f);
-  mov_func(-50, -20, -1000);
+  Steering(-1, 360 * 4);
+  mov_func(-50, 0, -1250);
 
   // 3個目
-  mov_func(50, 0, 640);
-  Steering(1, 360 * 1.5f);
-  mov_func(-50, 50, -1500);
+  mov_func(50, 0, 500);
+  Steering(-1, 360 * 5);
+  mov_func(-50, 0, -2500);
+  mov_func(50, 0, 500);
+  mov_func(-50, -50, -250);
+  Steering(1, 360 * 6);
+  mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 3f);
+  mov_func(-50, -50, -750);
+  Steering(1, 360 * 7);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
-  mov_func(50, 0, 50);
+  mov_func(50, 0, 100);
   arm_func(20, -30);
-  mov_func(-50, 0, -50);
+  mov_func(-50, 0, -100);
+  mov_func(50, 0, 100);
+
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(1, 360 * 2.25f);
+  Steering(-1, 360 * 5);
   mov_func(-50, 0, -1500);
 }
 void collect_GreenStart()
@@ -383,7 +393,7 @@ void alg_collect_GreenStart()
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(1, 360 * 1.5);
+  Steering(1, 360 * 5);
   arm_func(20, -30);
   mov_func(-50, -20, -1500);
   mov_func(50, 0, 100);
@@ -489,6 +499,7 @@ void calibration(void)
   //arm_func(30, -60);
   // ちょっと押す
   //mov_func(-50, 0, -100);
+
   //mov_func(70, 0, 2000);
   //mov_func(-70, 200, -8000);
   //mov_func(-70, 0, -4000);
@@ -895,55 +906,50 @@ void MuscTsk(VP_INT exinf)
 
 void ColsTsk(VP_INT exinf)
 {
+  for (;;)
   {
     ecrobot_process_bg_nxtcolorsensor();
-    /*----------- 周期 タイマー群 -----------*/
-    void MoveCyc(VP_INT exinf)
-    {
-<<<<<<< HEAD
-      isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
-=======
-      isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
->>>>>>> 4f17b26964ece83837e12ca33d8db8e1bce4f565
-    }
+    dly_tsk(2);
+  }
+}
 
-    void DispCyc(VP_INT exinf)
-    {
-<<<<<<< HEAD
-=======
+/*----------- 周期 タイマー群 -----------*/
+void MoveCyc(VP_INT exinf)
+{
+  isig_sem(Stskc); // MoveTskを進めるためにセマフォを操作
+}
 
-      /* OSにより1msごとに呼び出される */
-      void jsp_systick_low_priority(void)
-      {
-<<<<<<< HEAD
-        if (get_OS_flag())
-        {
-          isig_tim(); // 今回はタイマを使っているのでこの呼び出しが必要
-=======
-        if (get_OS_flag())
-        {
-          isig_tim(); // 今回はタイマを使っているのでこの呼び出しが必要
->>>>>>> 4f17b26964ece83837e12ca33d8db8e1bce4f565
-        }
-      }
+void DispCyc(VP_INT exinf)
+{
+  iact_tsk(Tdisp); // DispTskを定期的に起動
+}
 
-      /*----------- システムフック関数群 -----------*/
-      void ecrobot_device_initialize(void)
-      {
-        nxt_motor_set_speed(Rmotor, 0, 0);
-        nxt_motor_set_speed(Lmotor, 0, 0);
-        nxt_motor_set_speed(Amotor, 0, 0);
-        ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
-        //ecrobot_set_light_sensor_active(Light);
-        //ecrobot_init_sonar_sensor(Sonar);
-      }
+/* OSにより1msごとに呼び出される */
+void jsp_systick_low_priority(void)
+{
+  if (get_OS_flag())
+  {
+    isig_tim(); // 今回はタイマを使っているのでこの呼び出しが必要
+  }
+}
 
-      void ecrobot_device_terminate(void)
-      {
-        nxt_motor_set_speed(Rmotor, 0, 1);
-        nxt_motor_set_speed(Lmotor, 0, 1);
-        nxt_motor_set_speed(Amotor, 0, 1);
-        ecrobot_term_nxtcolorsensor(Color);
-        //ecrobot_set_light_sensor_inactive(Light);
-        //ecrobot_term_sonar_sensor(Sonar);
-      }
+/*----------- システムフック関数群 -----------*/
+void ecrobot_device_initialize(void)
+{
+  nxt_motor_set_speed(Rmotor, 0, 0);
+  nxt_motor_set_speed(Lmotor, 0, 0);
+  nxt_motor_set_speed(Amotor, 0, 0);
+  ecrobot_init_nxtcolorsensor(Color, NXT_COLORSENSOR);
+  //ecrobot_set_light_sensor_active(Light);
+  //ecrobot_init_sonar_sensor(Sonar);
+}
+
+void ecrobot_device_terminate(void)
+{
+  nxt_motor_set_speed(Rmotor, 0, 1);
+  nxt_motor_set_speed(Lmotor, 0, 1);
+  nxt_motor_set_speed(Amotor, 0, 1);
+  ecrobot_term_nxtcolorsensor(Color);
+  //ecrobot_set_light_sensor_inactive(Light);
+  //ecrobot_term_sonar_sensor(Sonar);
+}
