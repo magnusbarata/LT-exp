@@ -76,11 +76,14 @@ void collect_BlueStart();
 void collect_GreenStart();
 void collect_BlueFinish();
 void collect_GreenFinish();
-
+void move_wheel();
+void set_tBlock();
 void alg_collect_BlueStart();
 void alg_collect_GreenStart();
 void alg_collect_BlueFinish();
 void alg_collect_GreenFinish();
+void alg_move_wheel();
+void alg_set_tBlock();
 
 /* 外部変数の定義 */
 char name[17];
@@ -215,6 +218,8 @@ NameFunc MainMenu[] = {
     {"Collect GreenStart", collect_GreenStart},
     {"Collect BlueFinish", collect_BlueFinish},
     {"Collect GreenFinish", collect_GreenFinish},
+    // {"Move Wheel", move_wheel},
+    // {"Set TBlock", set_tBlock},
     {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
                                    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -434,6 +439,23 @@ void alg_collect_GreenStart()
   mov_func(50, 0, 500);
   Steering(1, 360 * 5);
   mov_func(-50, 0, -1500);
+}
+
+/*--------------------------タイヤをどかす-------------------------*/
+// タイヤを青エリアに入らないようなところに設置
+void move_wheel()
+{
+}
+/*---------------------------T字ブロックを設置-------------------------*/
+void set_tBlock()
+{
+  // test用に作ったプログラムが割とうまくいったので基本はそれを採用
+  // testCode
+  arm_func(10, -15);
+  mov_func(-50, 0, -100);
+  Steering(1, 360 * 2.2);
+  arm_func(5, 15);
+  mov_func(50, 0, 100);
 }
 
 /*---------------------------Finish関数群-------------------------*/
