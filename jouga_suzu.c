@@ -301,45 +301,29 @@ void alg_collect_blue_ball()
   act_tsk(Tmotr);
 }
 
-void Steering(int direction, int angle)
+void steering(int direction, float angle)
 {
   // direction (-1 : 左 | 1 : 右)
   // angle (ステアリング角度の絶対値)
 
+  // 動かすモーターの回転数を格納
+  int moving_motor_count = 0;
+  // 動かすモーターと止めるモーターのポート
+  const int moving_motor = (direction == 1) ? Lmotor : Rmotor;
+  const int stopping_motor = (direction == 1) ? Rmotor : Lmotor;
+
+  // 初期化
   nxt_motor_set_count(Rmotor, 0);
   nxt_motor_set_count(Lmotor, 0);
-  int RmotorCount = 0;
-  int LmotorCount = 0;
-
-  int masterMotorCount;
-
-  if (direction == 1)
+  // 旋回開始
+  nxt_motor_set_speed(moving_motor, -75, 0);
+  nxt_motor_set_speed(stopping_motor, 0, 1);
+  while (moving_motor_count < angle)
   {
-    nxt_motor_set_speed(Rmotor, 0, 1);
-    nxt_motor_set_speed(Lmotor, -75, 0);
+    moving_motor_count = -nxt_motor_get_count(moving_motor);
   }
-  else
-  {
-    nxt_motor_set_speed(Lmotor, 0, 1);
-    nxt_motor_set_speed(Rmotor, -75, 0);
-  }
-
-  while (masterMotorCount < angle)
-  {
-    RmotorCount = -nxt_motor_get_count(Rmotor);
-    LmotorCount = -nxt_motor_get_count(Lmotor);
-    if (direction == 1)
-    {
-      masterMotorCount = LmotorCount;
-    }
-    else
-    {
-      masterMotorCount = RmotorCount;
-    }
-  }
-  // いったん止めます
-  nxt_motor_set_speed(Rmotor, 0, 1);
-  nxt_motor_set_speed(Lmotor, 0, 1);
+  // 旋回終了
+  nxt_motor_set_speed(moving_motor, 0, 1);
 }
 
 /*---------------------------Start関数群-------------------------*/
@@ -353,7 +337,7 @@ void alg_collect_BlueStart()
   /*------------------------------青エリアスタートver------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(-1, 360 * 5);
+  steering(-1, 360 * 5);
   arm_func(20, -30);
   mov_func(-50, 20, -1500);
   mov_func(50, 0, 100);
@@ -361,22 +345,22 @@ void alg_collect_BlueStart()
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(-1, 360 * 4);
+  steering(-1, 360 * 4);
   mov_func(-50, 0, -1250);
 
   // 3個目
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 5);
+  steering(-1, 360 * 5);
   mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
   mov_func(-50, -50, -250);
-  Steering(1, 360 * 6);
+  steering(1, 360 * 6);
   mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
   mov_func(-50, -50, -750);
-  Steering(1, 360 * 7);
+  steering(1, 360 * 7);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
@@ -386,7 +370,7 @@ void alg_collect_BlueStart()
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 5);
+  steering(-1, 360 * 5);
   mov_func(-50, 0, -1500);
 }
 void collect_GreenStart()
@@ -398,7 +382,7 @@ void alg_collect_GreenStart()
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
   // 1個目
   mov_func(-50, 0, -2000);
-  Steering(1, 360 * 5);
+  steering(1, 360 * 5);
   arm_func(20, -30);
   mov_func(-50, -20, -1500);
   mov_func(50, 0, 100);
@@ -406,22 +390,22 @@ void alg_collect_GreenStart()
 
   // 2個目
   mov_func(50, 0, 360);
-  Steering(1, 360 * 4);
+  steering(1, 360 * 4);
   mov_func(-50, 0, -1250);
 
   // 3個目
   mov_func(50, 0, 500);
-  Steering(1, 360 * 5);
+  steering(1, 360 * 5);
   mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
   mov_func(-50, 50, -250);
-  Steering(-1, 360 * 6);
+  steering(-1, 360 * 6);
   mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
   mov_func(-50, -50, -750);
-  Steering(1, 360 * 7);
+  steering(1, 360 * 7);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
@@ -437,7 +421,7 @@ void alg_collect_GreenStart()
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(1, 360 * 5);
+  steering(1, 360 * 5);
   mov_func(-50, 0, -1500);
 }
 
@@ -453,7 +437,7 @@ void set_tBlock()
   // testCode
   arm_func(10, -15);
   mov_func(-50, 0, -100);
-  Steering(1, 360 * 2.2);
+  steering(1, 360 * 2.25);
   arm_func(5, 15);
   mov_func(50, 0, 100);
 }
@@ -477,7 +461,7 @@ void alg_collect_BlueFinish()
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(1, 360 * 5);
+  steering(1, 360 * 5);
   mov_func(-50, 0, -1500);
 }
 
@@ -497,7 +481,7 @@ void alg_collect_GreenFinish()
 
   // 帰宅
   mov_func(50, 0, 500);
-  Steering(-1, 360 * 5);
+  steering(-1, 360 * 5);
   mov_func(-50, 0, -1500);
 }
 
@@ -513,8 +497,8 @@ void calibration(void)
 左曲がり : mov_func(-50, 30, 100);
 アーム上げ : arm_func(20, -30);
 アーム下げ : arm_func(20, 30);
-左旋回 : Steering(-1, 360 * 3);
-右旋回 : Steering(1, 360 * 3);
+左旋回 : steering(-1, 360 * 3);
+右旋回 : steering(1, 360 * 3);
 */
 
   // ピンクエリアに設置
