@@ -334,44 +334,49 @@ void collect_BlueStart()
 }
 void alg_collect_BlueStart()
 {
+  // 青スタートの場合は1, 緑エリアスタートの場合は-1
+  // T字ブロックのやつとは逆
+  const int startPosition = 1; 
   /*------------------------------青エリアスタートver------------------------------*/
   // 1個目
-  mov_func(-50, 0, -2000);
-  steering(-1, 360 * 5);
-  arm_func(20, -30);
-  mov_func(-50, 20, -1500);
+  mov_func(-75, 0, -1065);
+  steering(-1 * startPosition, 1.125);
+  mov_func(-70, 0, -935);
+  // 回収したら少し下がる
   mov_func(50, 0, 100);
-  arm_func(20, 30);
-
-  // 2個目
-  mov_func(50, 0, 360);
-  steering(-1, 360 * 4);
-  mov_func(-50, 0, -1250);
-
-  // 3個目
-  mov_func(50, 0, 500);
-  steering(-1, 360 * 5);
-  mov_func(-50, 0, -2500);
-  mov_func(50, 0, 500);
-  mov_func(-50, -50, -250);
-  steering(1, 360 * 6);
-  mov_func(-50, 0, -1500);
-
-  // 4個目
-  mov_func(50, 0, 500);
-  mov_func(-50, -50, -750);
-  steering(1, 360 * 7);
-  mov_func(-50, 0, -1500);
-  // 1歩下がってアーム上げ下げしてボール取得
-  mov_func(50, 0, 100);
-  arm_func(20, -30);
+  steering(-1 * startPosition, 360 * 1.125);
+  mov_func(-50, -50, -1065);
+  // 2個目を回収したので, 戻る
+  mov_func(50, 0, 120);
+// 完全に180°回転はしない
+  steering(-1 * startPosition, 360 * 2);
+  // ちょっと方向を変えるs
   mov_func(-50, 0, -100);
+  steering(-1 * startPosition, 360 * 0.5);
+  // 3個目のボールを取るため前進
+  mov_func(-50, 0, -1465);
+  steering(-1 * startPosition, 360 * 1.125);
+  mov_func(-50, 0, -300);
+  // 回収したら少し下がる
   mov_func(50, 0, 100);
-
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-50, 50 * startPosition, -1100);
+  // アームを上げ下げすることできっちり回収
+  arm_func(20, -30);
+  arm_func(20, 30);
+  // 揺らすことでしっかり設置
+  mov_func(50, 0, 50);
+  mov_func(-50, 0, -50);
+  mov_func(50, 0, 50);
+  // アームを上げて解放
+  arm_func(20, -30);
   // 帰宅
-  mov_func(50, 0, 500);
-  steering(-1, 360 * 5);
-  mov_func(-50, 0, -1500);
+  mov_func(100, 0, 300);
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-100, 0, -930);
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-100, 0, -2500);
+  
 }
 void collect_GreenStart()
 {
