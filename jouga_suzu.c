@@ -216,10 +216,10 @@ NameFunc MainMenu[] = {
     {"Calibration", calibrate},
     {"Collect BlueStart", collect_BlueStart},
     {"Collect GreenStart", collect_GreenStart},
-    {"Collect BlueFinish", collect_BlueFinish},
-    {"Collect GreenFinish", collect_GreenFinish},
-    // {"Move Wheel", move_wheel},
-    // {"Set TBlock", set_tBlock},
+    // {"Collect BlueFinish", collect_BlueFinish},
+    // {"Collect GreenFinish", collect_GreenFinish},
+    {"Move Wheel", move_wheel},
+    {"Set TBlock", set_tBlock},
     {"Exit", ecrobot_restart_NXT}, // OSの制御に戻る
                                    //  {"Power Off", ecrobot_shutdown_NXT},	// 電源を切る
 };
@@ -426,20 +426,102 @@ void alg_collect_GreenStart()
 }
 
 /*--------------------------タイヤをどかす-------------------------*/
+void move_wheel () {
+  algorithm = alg_move_wheel;
+}
 // タイヤを青エリアに入らないようなところに設置
-void move_wheel()
+void alg_move_wheel(const int startPosition)
 {
+  mov_func(-50, 0, -500);
+  steering(-1 * startPosition, 360 * 1.125);
+
+  // アーム上げ下げする方
+  /*
+  arm_func(20, -30);
+  // 中央まで行ったらアームを下げてタイヤ回収
+  mov_func(-70, 0, -1000); 
+  arm_func(20, 30);
+  // 奥まで行ったら, アームを上げて中央まで戻る
+  mov_func(-70, 0, -1000);
+  arm_func(20, -30);
+  mov_func(70, 0, 1000);
+  // 一応アームは下げとく
+  arm_func(20, -30);
+  */
+
+  // タイヤへ突進し, 適当なところへ運ぶ
+  mov_func(-70, 0, -2000);
+  // 中央へ戻る
+  mov_func(70, 0, 1000);
 }
 /*---------------------------T字ブロックを設置-------------------------*/
-void set_tBlock()
+void set_tBlock () {
+  algorithm = alg_set_tBlock;
+}
+void alg_set_tBlock()
 {
-  // test用に作ったプログラムが割とうまくいったので基本はそれを採用
-  // testCode
+  // 青スタートの場合は-1, 緑エリアスタートの場合は1
+  const int startPosition = 1;
+  // カラーセンサーの閾値
+  static int COL_THRES[] = {400, 350, 320};
+  // nxtcolorsensor_rgbを使って得られる色を格納する配列
+  S16 col[3];
+  // 色を識別する(この関数内では6となってればよい)
+  // マゼンタの時は5になってればよい
+  U8 CBits = 0;
+
+  // 各種PID制御変数
+  int Ldeg, Rdeg, turn;
+  int cur_err, prev_err, integral, derivative;
+  double kp = 70.0;
+  double ki = 0;
+  double kd = 0;
+  
+  alg_move_wheel(startPosition);
+  // 右へ90°旋回してT字ブロックへ狙いを定める
+  steering(1 * startPosition, 360 * 1.125);
   arm_func(10, -15);
-  mov_func(-50, 0, -100);
-  steering(1, 360 * 2.25);
-  arm_func(5, 15);
-  mov_func(50, 0, 100);
+  mov_func(-50, 0, -500);
+  // アームを上げてT字ブロック回収
+  arm_func(10, -15);
+  mov_func(50, 0, 150);
+  steering(1 * startPosition, 360 * 1.125);
+  // 黄色エリアへ狙いを定めたので直進
+  mov_func(-50, 0, -1000);
+
+  // mov_func()だと中で, 移動処理を全部ラップしてしまっているのでセンサーを使う場合, while文内で
+  // 毎回 mov_func()を呼び出すか, この関数内でPI制御を書く必要がある. 今回は後者の方法で行う.
+  nxt_motor_set_count(Lmotor, 0);
+  nxt_motor_set_count(Rmotor, 0);
+  prev_err = integral = derivative = 0;
+  do
+  {
+    // PID制御
+    Ldeg = nxt_motor_get_count(Lmotor);
+    Rdeg = nxt_motor_get_count(Rmotor);
+    cur_err = Ldeg - Rdeg;
+    integral = integral + cur_err;
+    derivative = cur_err - prev_err;
+    turn = kp * cur_err + ki * integral + kd * derivative;
+    motor_set_speed(Lmotor, -50 - spd_limit(turn), 1); 
+    motor_set_speed(Rmotor, -50 + spd_limit(turn), 1);
+    prev_err = cur_err;
+
+    // 色センサー検知アルゴリズム
+    ecrobot_get_nxtcolorsensor_rgb(Color, col);
+    CBits = bin(col[0], COL_THRES[0], 2) |
+            bin(col[1], COL_THRES[1], 1) |
+            bin(col[2], COL_THRES[2], 0);
+  } while (CBits != 5 && CBits != 6));
+  // ↑マゼンタを誤認識してしまうリスクを考慮して判定は緑スタート青スタートで分けるべき...?
+  // とりあえず止まる
+  mov_func(0, 0, 1);
+  // T字ブロック設置
+  arm_func(15, 30);
+  // 帰宅
+  mov_func(50, 0, 500);
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-100, 50 * startPosition, -1000);  
 }
 
 /*---------------------------Finish関数群-------------------------*/
