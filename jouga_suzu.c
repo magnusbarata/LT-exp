@@ -425,34 +425,35 @@ void alg_collect_GreenStart()
   mov_func(-50, 0, -1500);
 }
 
-/*--------------------------タイヤをどかす-------------------------*/
+/*--------------------------2重タイヤを黄色エリアへ-------------------------*/
 void move_wheel () {
   algorithm = alg_move_wheel;
 }
 // タイヤを青エリアに入らないようなところに設置
 void alg_move_wheel(const int startPosition)
 {
-  mov_func(-50, 0, -500);
+  mov_func(-50, 0, -600);
   steering(-1 * startPosition, 360 * 1.125);
 
-  // アーム上げ下げする方
-  /*
+  // タイヤへ突進し, 回収
+  mov_func(-70, 0, -810);
   arm_func(20, -30);
-  // 中央まで行ったらアームを下げてタイヤ回収
-  mov_func(-70, 0, -1000); 
+  // 少し前進し, アームを下げて回収
+  mov_func(-50, 0, -120);
   arm_func(20, 30);
-  // 奥まで行ったら, アームを上げて中央まで戻る
-  mov_func(-70, 0, -1000);
+  // 元の場所より少し奥へ後退
+  mov_func(70, 0, 900);
+  // 黄色エリアへ狙いを定める
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-50, -50 * startPosition, -535);
+  // アームを上げてタイヤを放つ
   arm_func(20, -30);
-  mov_func(70, 0, 1000);
-  // 一応アームは下げとく
-  arm_func(20, -30);
-  */
-
-  // タイヤへ突進し, 適当なところへ運ぶ
-  mov_func(-70, 0, -2000);
-  // 中央へ戻る
-  mov_func(70, 0, 1000);
+  // ちょっと, 押してタイヤを奥の方へしまう.
+  mov_func(-50, 0, -100);
+  // 一時帰宅
+  mov_func(50, 0, 600);
+  steering(1 * startPosition, 360 * 1.125);
+  mov_func(-50, 0, -1000);
 }
 /*---------------------------T字ブロックを設置-------------------------*/
 void set_tBlock () {
@@ -478,16 +479,28 @@ void alg_set_tBlock()
   double kd = 0;
   
   alg_move_wheel(startPosition);
-  // 右へ90°旋回してT字ブロックへ狙いを定める
+  while (1) {
+    check_NXT_buttons();
+    // ベースエリア内で設置してRUNボタンが押されたら, 発進
+    if (ecrobot_is_RUN_button_pressed() == 1) {
+      break;
+    }
+  }
+  // エリアから出て中央方向へ狙いを定める
+  mov_func(-50, 0, -600);
+  steering(-1 * startPosition, 360 * 1.125);
+
+  mov_func(-70, 0, -930);
+  // 90°旋回してT字ブロックへ狙いを定める
   steering(1 * startPosition, 360 * 1.125);
   arm_func(10, -15);
-  mov_func(-50, 0, -500);
+  mov_func(-50, 0, -330);
   // アームを上げてT字ブロック回収
   arm_func(10, -15);
-  mov_func(50, 0, 150);
+  mov_func(50, 0, 100);
   steering(1 * startPosition, 360 * 1.125);
   // 黄色エリアへ狙いを定めたので直進
-  mov_func(-50, 0, -1000);
+  mov_func(-50, 0, -500);
 
   // mov_func()だと中で, 移動処理を全部ラップしてしまっているのでセンサーを使う場合, while文内で
   // 毎回 mov_func()を呼び出すか, この関数内でPI制御を書く必要がある. 今回は後者の方法で行う.
@@ -521,7 +534,7 @@ void alg_set_tBlock()
   // 帰宅
   mov_func(50, 0, 500);
   steering(1 * startPosition, 360 * 1.125);
-  mov_func(-100, 50 * startPosition, -1000);  
+  mov_func(-100, 50 * startPosition, -1500);  
 }
 
 /*---------------------------Finish関数群-------------------------*/
