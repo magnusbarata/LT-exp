@@ -338,44 +338,65 @@ void alg_collect_BlueStart()
   // T字ブロックのやつとは逆
   const int startPosition = 1;
   /*------------------------------青エリアスタートver------------------------------*/
+
   // 1個目
-  mov_func(-75, 0, -1065);
-  steering(-1 * startPosition, 1.125);
-  mov_func(-70, 0, -935);
-  // 回収したら少し下がる
-  mov_func(50, 0, 100);
-  steering(-1 * startPosition, 360 * 1.125);
-  mov_func(-50, -50, -1065);
-  // 2個目を回収したので, 戻る
-  mov_func(50, 0, 120);
-  // 完全に180°回転はしない
-  steering(-1 * startPosition, 360 * 2);
-  // ちょっと方向を変えるs
-  mov_func(-50, 0, -100);
-  steering(-1 * startPosition, 360 * 0.5);
-  // 3個目のボールを取るため前進
-  mov_func(-50, 0, -1465);
-  steering(-1 * startPosition, 360 * 1.125);
-  mov_func(-50, 0, -300);
-  // 回収したら少し下がる
-  mov_func(50, 0, 100);
-  steering(1 * startPosition, 360 * 1.125);
-  mov_func(-50, 50 * startPosition, -1100);
-  // アームを上げ下げすることできっちり回収
-  arm_func(20, -30);
-  arm_func(20, 30);
-  // 揺らすことでしっかり設置
-  mov_func(50, 0, 50);
-  mov_func(-50, 0, -50);
-  mov_func(50, 0, 50);
-  // アームを上げて解放
-  arm_func(20, -30);
-  // 帰宅
-  mov_func(100, 0, 300);
-  steering(1 * startPosition, 360 * 1.125);
-  mov_func(-100, 0, -930);
-  steering(1 * startPosition, 360 * 1.125);
-  mov_func(-100, 0, -2500);
+  mov_func(-50, 0, -390);
+  mov_func(-50, 310, -305);
+  mov_func(-50, 0, -110);
+  mov_func(-50, -320, -150);
+  mov_func(50, 0, 520);
+
+  // 2個目
+  arm_func(17, -3);
+  steering(1, 360 * 0.6);
+  mov_func(-50, 0, -660);
+  mov_func(50, 0, 350);
+
+  steering(1, 360 * 0.8);
+  mov_func(-50, 200, -700);
+  mov_func(-50, 0, -400);
+  steering(-1, 360 * 0.5);
+  mov_func(-50, 0, -700);
+
+  // suzu
+  // 1個目
+  // mov_func(-50, 0, -700);
+  // steering(-1 * startPosition, 360);
+  // mov_func(-50, 0, -935);
+  // // 回収したら少し下がる
+  // mov_func(50, 0, 100);
+  // steering(-1 * startPosition, 360);
+  // mov_func(-50, -50, -800);
+  // // 2個目を回収したので, 戻る
+  // mov_func(50, 0, 120);
+  // // 完全に180°回転はしない
+  // steering(-1 * startPosition, 360 * 2);
+  // // ちょっと方向を変えるs
+  // mov_func(-50, 0, -100);
+  // steering(-1 * startPosition, 360 * 0.5);
+  // // 3個目のボールを取るため前進
+  // mov_func(-50, 0, -1465);
+  // steering(-1 * startPosition, 360);
+  // mov_func(-50, 0, -300);
+  // // 回収したら少し下がる
+  // mov_func(50, 0, 100);
+  // steering(1 * startPosition, 360);
+  // mov_func(-50, 50 * startPosition, -1100);
+  // // アームを上げ下げすることできっちり回収
+  // arm_func(20, -30);
+  // arm_func(20, 30);
+  // // 揺らすことでしっかり設置
+  // mov_func(50, 0, 50);
+  // mov_func(-50, 0, -50);
+  // mov_func(50, 0, 50);
+  // // アームを上げて解放
+  // arm_func(20, -30);
+  // // 帰宅
+  // mov_func(100, 0, 300);
+  // steering(1 * startPosition, 360);
+  // mov_func(-100, 0, -930);
+  // steering(1 * startPosition, 360);
+  // mov_func(-100, 0, -2500);
 }
 void collect_GreenStart()
 {
@@ -386,30 +407,47 @@ void alg_collect_GreenStart()
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
   int dist = 0;
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
-  while (ecrobot_get_touch_sensor(Rtouch) == 0)
+  /*while (ecrobot_get_touch_sensor(Rtouch) == 0)
   {
     mov_func(-50, 0, dist);
     dist += 10;
   }
-  mov_func(-50, 0, -150);
+  mov_func(-50, 0, -150);*/
+
+  // Calib
+  /*while(){
+    // Let down arm
+    }*/
 
   // 1個目
-  /*mov_func(-50, 0, -620);
-  mov_func(-50,-20, -150);
-  mov_func(-50, 20, -100);
-  mov_func(50,  0, 250);
-  mov_func(50,  0, 300);
-  
-  // 2個目 
-  arm_func(20, -10);
-  mov_func(50, -95, 100);
-  mov_func(-50,200,-250);
+  mov_func(-50, 0, -390);
+  mov_func(-50, -310, -305);
+  mov_func(-50, 0, -110);
+  mov_func(-50, 320, -150);
+  mov_func(50, 0, 520);
+
+  // 2個目
+  arm_func(17, -3);
+  steering(-1, 360 * 0.6);
+  mov_func(-50, 0, -660);
+  mov_func(50, 0, 350);
+
+  steering(-1, 360 * 0.8);
+  mov_func(-50, -200, -700);
+  mov_func(-50, 0, -400);
+  steering(1, 360 * 0.5);
+  mov_func(-50, 0, -700);
+
+  /*mov_func(50, -92, 99);
+  mov_func(-50, 200, -243);
+
   mov_func(-50,30,-800);
   mov_func(50,0,300);
   mov_func(-50, 170, -300);
 
-  mov_func(-50, 0, -1500);*/
-  //mov_func(-50, -30, -70);
+  // 3個目
+  mov_func(-50, 0, -1400);
+  mov_func(-50, -30, -60);*/
   /*
   Steering(1, 360 * 1);
   arm_func(20, -30);
@@ -421,7 +459,7 @@ void alg_collect_GreenStart()
   Steering(1, 360 * 0.5);
   mov_func(-50, 0, -1250);
 
-  // 3個目
+  
   mov_func(50, 0, 500);4
   Steering(1, 360 * 1.5);
   mov_func(-50, 0, -2500);
@@ -461,27 +499,29 @@ void move_wheel()
 // タイヤを青エリアに入らないようなところに設置
 void alg_move_wheel(const int startPosition)
 {
-  mov_func(-50, 0, -600);
-  steering(-1 * startPosition, 360 * 1.125);
+  mov_func(-50, 0, -350);
+  steering(-1 * startPosition, 360);
 
-  // タイヤへ突進し, 回収
-  mov_func(-70, 0, -810);
   arm_func(20, -30);
+  // タイヤへ突進し, 回収
+  mov_func(-50, 0, -810);
   // 少し前進し, アームを下げて回収
-  mov_func(-50, 0, -120);
-  arm_func(20, 30);
+  // mov_func(-50, 0, -120);
+  arm_func(20, 45);
   // 元の場所より少し奥へ後退
-  mov_func(70, 0, 900);
+  mov_func(50, 0, 700);
   // 黄色エリアへ狙いを定める
-  steering(1 * startPosition, 360 * 1.125);
-  mov_func(-50, -50 * startPosition, -535);
+  // steering(1 * startPosition, 360 * 0.95);
+  steering(1 * startPosition, 360 * 1.65);
+  mov_func(-50, 0, -535);
+  mov_func(50, 0, 25);
   // アームを上げてタイヤを放つ
   arm_func(20, -30);
   // ちょっと, 押してタイヤを奥の方へしまう.
   mov_func(-50, 0, -100);
   // 一時帰宅
   mov_func(50, 0, 600);
-  steering(1 * startPosition, 360 * 1.125);
+  steering(1 * startPosition, 360);
   mov_func(-50, 0, -1000);
 }
 /*---------------------------T字ブロックを設置-------------------------*/
@@ -518,55 +558,58 @@ void alg_set_tBlock()
       break;
     }
   }
-  // エリアから出て中央方向へ狙いを定める
-  mov_func(-50, 0, -600);
-  steering(-1 * startPosition, 360 * 1.125);
 
-  mov_func(-70, 0, -930);
+  arm_func(20, 40);
+  // エリアから出て中央方向へ狙いを定める
+  mov_func(-50, 0, -150);
+  steering(-1 * startPosition, 360);
+
+  mov_func(-50, 0, -950);
   // 90°旋回してT字ブロックへ狙いを定める
-  steering(1 * startPosition, 360 * 1.125);
-  arm_func(10, -15);
-  mov_func(-50, 0, -330);
+  steering(1 * startPosition, 360);
+  //  steering(-1 * startPosition, 360 * 0.1);
+  arm_func(5, -4);
+  mov_func(-50, 0, -285);
   // アームを上げてT字ブロック回収
   arm_func(10, -15);
-  mov_func(50, 0, 100);
-  steering(1 * startPosition, 360 * 1.125);
+  mov_func(50, 0, 200);
+  steering(1 * startPosition, 360 * 0.7);
   // 黄色エリアへ狙いを定めたので直進
-  mov_func(-50, 0, -500);
+  mov_func(-50, 0, -1000);
 
   // mov_func()だと中で, 移動処理を全部ラップしてしまっているのでセンサーを使う場合, while文内で
   // 毎回 mov_func()を呼び出すか, この関数内でPI制御を書く必要がある. 今回は後者の方法で行う.
-  nxt_motor_set_count(Lmotor, 0);
-  nxt_motor_set_count(Rmotor, 0);
-  prev_err = integral = derivative = 0;
-  do
-  {
-    // PID制御
-    Ldeg = nxt_motor_get_count(Lmotor);
-    Rdeg = nxt_motor_get_count(Rmotor);
-    cur_err = Ldeg - Rdeg;
-    integral = integral + cur_err;
-    derivative = cur_err - prev_err;
-    turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(Lmotor, -50 - spd_limit(turn), 1);
-    motor_set_speed(Rmotor, -50 + spd_limit(turn), 1);
-    prev_err = cur_err;
+  // nxt_motor_set_count(Lmotor, 0);
+  // nxt_motor_set_count(Rmotor, 0);
+  // prev_err = integral = derivative = 0;
+  // do
+  // {
+  //   // PID制御
+  //   Ldeg = nxt_motor_get_count(Lmotor);
+  //   Rdeg = nxt_motor_get_count(Rmotor);
+  //   cur_err = Ldeg - Rdeg;
+  //   integral = integral + cur_err;
+  //   derivative = cur_err - prev_err;
+  //   turn = kp * cur_err + ki * integral + kd * derivative;
+  //   motor_set_speed(Lmotor, -50 - spd_limit(turn), 1);
+  //   motor_set_speed(Rmotor, -50 + spd_limit(turn), 1);
+  //   prev_err = cur_err;
 
-    // 色センサー検知アルゴリズム
-    ecrobot_get_nxtcolorsensor_rgb(Color, col);
-    CBits = bin(col[0], COL_THRES[0], 2) |
-            bin(col[1], COL_THRES[1], 1) |
-            bin(col[2], COL_THRES[2], 0);
-  } while (CBits != 5 && CBits != 6));
+  //   // 色センサー検知アルゴリズム
+  //   ecrobot_get_nxtcolorsensor_rgb(Color, col);
+  //   CBits = bin(col[0], COL_THRES[0], 2) |
+  //           bin(col[1], COL_THRES[1], 1) |
+  //           bin(col[2], COL_THRES[2], 0);
+  // } while (CBits != 5 && CBits != 6));
   // ↑マゼンタを誤認識してしまうリスクを考慮して判定は緑スタート青スタートで分けるべき...?
   // とりあえず止まる
-  mov_func(0, 0, 1);
+  mov_func(50, 0, 50);
   // T字ブロック設置
   arm_func(15, 30);
   // 帰宅
   mov_func(50, 0, 500);
-  steering(1 * startPosition, 360 * 1.125);
-  mov_func(-100, 50 * startPosition, -1500);
+  steering(1 * startPosition, 360);
+  mov_func(-70, 50 * startPosition, -1500);
 }
 
 /*---------------------------Finish関数群-------------------------*/
