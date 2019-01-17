@@ -336,7 +336,7 @@ void alg_collect_BlueStart()
 {
   // 青スタートの場合は1, 緑エリアスタートの場合は-1
   // T字ブロックのやつとは逆
-  const int startPosition = 1; 
+  const int startPosition = 1;
   /*------------------------------青エリアスタートver------------------------------*/
   // 1個目
   mov_func(-75, 0, -1065);
@@ -348,7 +348,7 @@ void alg_collect_BlueStart()
   mov_func(-50, -50, -1065);
   // 2個目を回収したので, 戻る
   mov_func(50, 0, 120);
-// 完全に180°回転はしない
+  // 完全に180°回転はしない
   steering(-1 * startPosition, 360 * 2);
   // ちょっと方向を変えるs
   mov_func(-50, 0, -100);
@@ -376,7 +376,6 @@ void alg_collect_BlueStart()
   mov_func(-100, 0, -930);
   steering(1 * startPosition, 360 * 1.125);
   mov_func(-100, 0, -2500);
-  
 }
 void collect_GreenStart()
 {
@@ -385,32 +384,56 @@ void collect_GreenStart()
 void alg_collect_GreenStart()
 {
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
+  int dist = 0;
+  /*-----------------------------緑エリアスタートver-----------------------------------------*/
+  while (ecrobot_get_touch_sensor(Rtouch) == 0)
+  {
+    mov_func(-50, 0, dist);
+    dist += 10;
+  }
+  mov_func(-50, 0, -150);
+
   // 1個目
-  mov_func(-50, 0, -2000);
-  steering(1, 360 * 5);
+  /*mov_func(-50, 0, -620);
+  mov_func(-50,-20, -150);
+  mov_func(-50, 20, -100);
+  mov_func(50,  0, 250);
+  mov_func(50,  0, 300);
+  
+  // 2個目 
+  arm_func(20, -10);
+  mov_func(50, -95, 100);
+  mov_func(-50,200,-250);
+  mov_func(-50,30,-800);
+  mov_func(50,0,300);
+  mov_func(-50, 170, -300);
+
+  mov_func(-50, 0, -1500);*/
+  //mov_func(-50, -30, -70);
+  /*
+  Steering(1, 360 * 1);
   arm_func(20, -30);
   mov_func(-50, -20, -1500);
   mov_func(50, 0, 100);
   arm_func(20, 30);
 
-  // 2個目
   mov_func(50, 0, 360);
-  steering(1, 360 * 4);
+  Steering(1, 360 * 0.5);
   mov_func(-50, 0, -1250);
 
   // 3個目
-  mov_func(50, 0, 500);
-  steering(1, 360 * 5);
+  mov_func(50, 0, 500);4
+  Steering(1, 360 * 1.5);
   mov_func(-50, 0, -2500);
   mov_func(50, 0, 500);
   mov_func(-50, 50, -250);
-  steering(-1, 360 * 6);
+  Steering(-1, 360 * 2.5);
   mov_func(-50, 0, -1500);
 
   // 4個目
   mov_func(50, 0, 500);
   mov_func(-50, -50, -750);
-  steering(1, 360 * 7);
+  Steering(1, 360 * 3.5);
   mov_func(-50, 0, -1500);
   // 1歩下がってアーム上げ下げしてボール取得
   mov_func(50, 0, 100);
@@ -426,12 +449,13 @@ void alg_collect_GreenStart()
 
   // 帰宅
   mov_func(50, 0, 500);
-  steering(1, 360 * 5);
-  mov_func(-50, 0, -1500);
+  Steering(1, 360 * 1.5);
+  mov_func(-50, 0, -1500);*/
 }
 
 /*--------------------------2重タイヤを黄色エリアへ-------------------------*/
-void move_wheel () {
+void move_wheel()
+{
   algorithm = alg_move_wheel;
 }
 // タイヤを青エリアに入らないようなところに設置
@@ -461,7 +485,8 @@ void alg_move_wheel(const int startPosition)
   mov_func(-50, 0, -1000);
 }
 /*---------------------------T字ブロックを設置-------------------------*/
-void set_tBlock () {
+void set_tBlock()
+{
   algorithm = alg_set_tBlock;
 }
 void alg_set_tBlock()
@@ -482,12 +507,14 @@ void alg_set_tBlock()
   double kp = 70.0;
   double ki = 0;
   double kd = 0;
-  
+
   alg_move_wheel(startPosition);
-  while (1) {
+  while (1)
+  {
     check_NXT_buttons();
     // ベースエリア内で設置してRUNボタンが押されたら, 発進
-    if (ecrobot_is_RUN_button_pressed() == 1) {
+    if (ecrobot_is_RUN_button_pressed() == 1)
+    {
       break;
     }
   }
@@ -521,7 +548,7 @@ void alg_set_tBlock()
     integral = integral + cur_err;
     derivative = cur_err - prev_err;
     turn = kp * cur_err + ki * integral + kd * derivative;
-    motor_set_speed(Lmotor, -50 - spd_limit(turn), 1); 
+    motor_set_speed(Lmotor, -50 - spd_limit(turn), 1);
     motor_set_speed(Rmotor, -50 + spd_limit(turn), 1);
     prev_err = cur_err;
 
@@ -539,7 +566,7 @@ void alg_set_tBlock()
   // 帰宅
   mov_func(50, 0, 500);
   steering(1 * startPosition, 360 * 1.125);
-  mov_func(-100, 50 * startPosition, -1500);  
+  mov_func(-100, 50 * startPosition, -1500);
 }
 
 /*---------------------------Finish関数群-------------------------*/
