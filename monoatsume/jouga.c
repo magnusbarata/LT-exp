@@ -65,10 +65,8 @@ U8 ecrobot_get_button_state(void);
 void ecrobot_poll_nxtstate(void);
 
 void calibrate(void);
-void collect_all(void);
 void collect_red_ball(void);
 void calibration(void);
-void alg_collect_all(void);
 void alg_collect_red_ball(void);
 
 /*------Suzu Algorithm---------------*/
@@ -333,13 +331,6 @@ void collect_GreenStart()
 void alg_collect_GreenStart()
 {
   /*-----------------------------緑エリアスタートver-----------------------------------------*/
-  /*
-  mov_func(-50, 0, -150);*/
-  // Calib
-  /*while(){
-    // Let down arm
-  }*/
-
   // 1個目
   mov_func(-50, 0, -390);
   mov_func(-50, -310, -305);
@@ -369,7 +360,7 @@ void alg_collect_GreenStart()
   mov_func(-50, 100, -380); // Prev:(-50, 100, -400)
   mov_func(-50, -300, -500); // Prev:(-50, -300, -600)
 
-  ///// Addition1 
+  ///// Addition1
    mov_func(-50, 90, -350);
    mov_func(-50, 0, -100); // Forward until wall, all_touch?
    //while (ecrobot_get_touch_sensor(Rtouch) == 0) mov_func(-50, 0, -5);
@@ -426,7 +417,7 @@ void alg_collect_BlueStart()
   mov_func(-50, -100, -380); // Prev:(-50, 100, -400)
   mov_func(-50, 300, -500); // Prev:(-50, -300, -600)
 
-  ///// Addition1 
+  ///// Addition1
    mov_func(-50, -90, -350);
    //mov_func(-50, 0, -100); // Forward until wall, all_touch?
    while (ecrobot_get_touch_sensor(Ltouch) == 0) mov_func(-50, 0, -5);
@@ -529,31 +520,6 @@ void alg_set_tBlock()
   // 黄色エリアへ狙いを定めたので直進
   mov_func(-50, 0, -1100);
 
-  // mov_func()だと中で, 移動処理を全部ラップしてしまっているのでセンサーを使う場合, while文内で
-  // 毎回 mov_func()を呼び出すか, この関数内でPI制御を書く必要がある. 今回は後者の方法で行う.
-  // nxt_motor_set_count(Lmotor, 0);
-  // nxt_motor_set_count(Rmotor, 0);
-  // prev_err = integral = derivative = 0;
-  // do
-  // {
-  //   // PID制御
-  //   Ldeg = nxt_motor_get_count(Lmotor);
-  //   Rdeg = nxt_motor_get_count(Rmotor);
-  //   cur_err = Ldeg - Rdeg;
-  //   integral = integral + cur_err;
-  //   derivative = cur_err - prev_err;
-  //   turn = kp * cur_err + ki * integral + kd * derivative;
-  //   motor_set_speed(Lmotor, -50 - spd_limit(turn), 1);
-  //   motor_set_speed(Rmotor, -50 + spd_limit(turn), 1);
-  //   prev_err = cur_err;
-
-  //   // 色センサー検知アルゴリズム
-  //   ecrobot_get_nxtcolorsensor_rgb(Color, col);
-  //   CBits = bin(col[0], COL_THRES[0], 2) |
-  //           bin(col[1], COL_THRES[1], 1) |
-  //           bin(col[2], COL_THRES[2], 0);
-  // } while (CBits != 5 && CBits != 6));
-  // ↑マゼンタを誤認識してしまうリスクを考慮して判定は緑スタート青スタートで分けるべき...?
   // とりあえず止まる
   mov_func(50, 0, 50);
   // T字ブロック設置
@@ -622,59 +588,9 @@ void calibration(void)
 左旋回 : steering(-1, 360 * 3);
 右旋回 : steering(1, 360 * 3);
 */
-
-  // ピンクエリアに設置
-  //arm_func(30, -60);
-  // ちょっと押す
-  //mov_func(-50, 0, -100);
-
-  //mov_func(70, 0, 2000);
-  //mov_func(-70, 200, -8000);
-  //mov_func(-70, 0, -4000);
-
-  // TO TEST
-  // arm_func(10, 30); // アームを下げる
-  // arm_func(10, -30); // アームを上げる
-  // mov_func(-40, 0, -700); // 直進
-  // mov_func(40, 0, 700); // 直進
-  //  mov_func(-40, 20, -3000); //　左曲がり
-  // mov_func(-40, -20, -3000); // 右曲がり
-
-  // mov_func(-100, 0, 1000);
-  //arm_func(10, -30); // アームを下げる
-  // arm_func(20, 30); // アームを上げる
-  // mov_func(100, 0, 1000);
-
-  /* -------------------緑エリアから真ん中のタイヤを取得してピンクエリアへ運ぶコード(ピンクエリアの青ボールも取得)----------------------------*/
-  /*
-  // アーム上げる
-  arm_func(20, -30);
-  mov_func(-50, 0, -1800);
-  // アーム下げる
-  arm_func(20, 30);
-  //右寄りに進む
-  mov_func(-50, -20, -2400);
-  mov_func(50, 0, 180);
-  arm_func(20, -50);
-  mov_func(50, 0, 1000);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 360, -500);
-  mov_func(-50, 0, -2200);
-*/
-  /* -----------------------------------------------------------------*/
 }
 
 /*----------- アルゴリズム群 -----------*/
-void collect_all(void)
-{
-  algorithm = alg_collect_all;
-}
-void alg_collect_all(void)
-{
-  //arm_func(10, 30);
-}
-
 void collect_red_ball(void)
 {
   algorithm = alg_collect_red_ball;
@@ -896,7 +812,7 @@ void MotrTsk(VP_INT exinf)
     //else continue;?
     /* switch(ArmSens){
       case POS: motor_set_speed(Amotor, 0, 1); break;
-    } 
+    }
     clr_flg(Fsens, ~POS);*/
   }
 }
