@@ -1,0 +1,85 @@
+\documentclass[dvipdfmx,12pt]{jarticle}
+
+\setlength{\oddsidemargin}{-0pt}
+\setlength{\topmargin}{-20pt}
+\setlength{\headheight}{-0pt}
+\setlength{\headsep}{15pt}
+\setlength{\textwidth}{16cm}
+\setlength{\textheight}{23.5cm}
+\setlength{\footskip}{70pt}
+
+%Package for page setting
+\usepackage[toc,page]{appendix}
+\usepackage{booktabs}
+\usepackage{pdfpages}
+\usepackage[toc,page]{appendix}
+\renewcommand{\appendixtocname}{付録}
+\renewcommand{\appendixpagename}{付録}
+
+%Package for tables, graphs, program lists
+\usepackage{graphicx,color}
+\usepackage{pgfplots}
+\pgfplotsset{width=6cm,compat=1.3}
+\usepackage[labelformat=simple]{subcaption} % graph next to graph
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{chngcntr}
+\usepackage{listings,jlisting}
+
+%Package for detailed formatting
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+%% Custom Set
+\definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
+\definecolor{colFunc}{rgb}{1,0.07,0.54}
+\definecolor{CadetBlue}{cmyk}{0.62,0.57,0.23,0}
+\definecolor{Brown}{cmyk}{0,0.81,1,0.60}
+\definecolor{colID}{rgb}{0.63,0.44,0}
+
+\lstdefinestyle{c}{
+language=c,
+basicstyle=\footnotesize\ttfamily,
+keywordstyle={\color{OliveGreen}},
+keywordstyle={[2]\color{colFunc}},
+keywordstyle={[3]\color{CadetBlue}},
+commentstyle={\itshape\color{Brown}},
+identifierstyle={\color{colID}},
+stringstyle=\color{blue},
+tabsize=4,
+frame=tRBl,
+numbers=left,
+numberstyle={\ttfamily\small},
+breaklines=true,
+backgroundcolor={\color[gray]{.95}},
+captionpos=t,
+}
+
+\renewcommand\thesubfigure{(\alph{subfigure})}
+
+%New commands
+\newcommand\doubleRule{\toprule\toprule}
+\makeatletter	
+%listing
+\newcommand\inputcode[2][]{%
+  \filename@parse{\detokenize{#2}}
+  \lstinputlisting[caption=\texttt{\filename@base.\filename@ext},style=c,#1,]{#2}}
+
+%table at mullticol
+\newenvironment{tablehere}
+  {\def\@captype{table}}
+  {}
+
+%fig at multicol
+\newenvironment{figurehere}
+  {\def\@captype{figure}}
+  {}
+
+%roman number
+\newcommand*{\rom}[1]{\expandafter\@slowromancap\romannumeral #1@}
+\makeatother
