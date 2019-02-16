@@ -1,3 +1,11 @@
-#リファレンス用に入れたAPIたちをignore
-/nxtOSEK
+# OS X
 .DS_Store
+# リファレンス用に入れたAPIたちをignore
+/nxtOSEK
+
+
+# リファレンス用に入れた物集めのmap画像をignore
+/public
+
+# Editor
+.vscode/
